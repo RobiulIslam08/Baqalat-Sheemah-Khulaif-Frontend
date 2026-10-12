@@ -1,0 +1,300 @@
+# POS Frontend ↔ Backend API Integration
+
+## Background
+
+The POS frontend (Vite + React) has a complete UI design with forms, tables, and pages for all business modules. However, all data is currently **hardcoded or stored only in local React state** — nothing is persisted to the database. The backend (Express + MongoDB + TypeScript) is fully set up with 16 modules, each having Controller → Service → Model → Route architecture with Zod validation and JWT auth middleware.
+
+**Goal**: Connect every frontend page to its corresponding backend API endpoint so that all CRUD operations (create, read, update, delete) persist to MongoDB via the backend.
+
+---
+
+## Proposed Changes
+
+### Phase 1: API Infrastructure Layer
+
+#### [NEW] [api.js](file:///d:/Jakir-Vai/POS/src/services/api.js)
+Rewrite the existing `api.js` to be a robust, professional API client:
+- Add JWT token management (store/retrieve from localStorage)
+- Add automatic `Authorization: Bearer <token>` header injection
+- Add proper error handling with structured error responses
+- Add response interceptor for token refresh (401 handling)
+- Add `multipart/form-data` support for file uploads
+- Export named service methods for each module
+
+#### [NEW] [auth.service.js](file:///d:/Jakir-Vai/POS/src/services/auth.service.js)
+- `login(username, password)` → `POST /api/v1/auth/login`
+- `register(data)` → `POST /api/v1/auth/register`
+- `changePassword(data)` → `POST /api/v1/auth/change-password`
+- `refreshToken()` → `POST /api/v1/auth/refresh-token`
+- Token storage helpers (getToken, setToken, clearToken)
+
+#### [NEW] [product.service.js](file:///d:/Jakir-Vai/POS/src/services/product.service.js)
+- `createProduct(data)` → `POST /api/v1/products`
+- `getAllProducts(query)` → `GET /api/v1/products`
+- `getProductById(id)` → `GET /api/v1/products/:id`
+- `updateProduct(id, data)` → `PATCH /api/v1/products/:id`
+- `deleteProduct(id)` → `DELETE /api/v1/products/:id`
+
+#### [NEW] [supplier.service.js](file:///d:/Jakir-Vai/POS/src/services/supplier.service.js)
+- `createSupplier(data)` → `POST /api/v1/suppliers`
+- `getAllSuppliers()` → `GET /api/v1/suppliers`
+- `getSupplierById(id)` → `GET /api/v1/suppliers/:id`
+- `updateSupplier(id, data)` → `PATCH /api/v1/suppliers/:id`
+- `deleteSupplier(id)` → `DELETE /api/v1/suppliers/:id`
+
+#### [NEW] [customer.service.js](file:///d:/Jakir-Vai/POS/src/services/customer.service.js)
+- `createCustomer(data)` → `POST /api/v1/customers`
+- `getAllCustomers()` → `GET /api/v1/customers`
+- `getCustomerById(id)` → `GET /api/v1/customers/:id`
+- `updateCustomer(id, data)` → `PATCH /api/v1/customers/:id`
+- `deleteCustomer(id)` → `DELETE /api/v1/customers/:id`
+
+#### [NEW] [sale.service.js](file:///d:/Jakir-Vai/POS/src/services/sale.service.js)
+- `createSale(data)` → `POST /api/v1/sales`
+- `getAllSales(query)` → `GET /api/v1/sales`
+- `getSaleByBillNo(billNo)` → `GET /api/v1/sales/:billNo`
+- `createSalesReturn(data)` → `POST /api/v1/sales/return`
+
+#### [NEW] [purchase.service.js](file:///d:/Jakir-Vai/POS/src/services/purchase.service.js)
+- `createPurchase(data)` → `POST /api/v1/purchases`
+- `getAllPurchases(query)` → `GET /api/v1/purchases`
+- `getPurchaseById(id)` → `GET /api/v1/purchases/:id`
+
+#### [NEW] [expense.service.js](file:///d:/Jakir-Vai/POS/src/services/expense.service.js)
+- `postExpense(data)` → `POST /api/v1/expenses`
+- `getAllExpenses(query)` → `GET /api/v1/expenses`
+- `approveExpense(id)` → `PATCH /api/v1/expenses/:id/approve`
+
+#### [NEW] [stock.service.js](file:///d:/Jakir-Vai/POS/src/services/stock.service.js)
+- `getStock(query)` → `GET /api/v1/stock`
+- `getStockReturns(query)` → `GET /api/v1/stock/returns`
+- `processReturn(data)` → `POST /api/v1/stock/return`
+- `processCorrection(data)` → `POST /api/v1/stock/correction`
+
+#### [NEW] [credit.service.js](file:///d:/Jakir-Vai/POS/src/services/credit.service.js)
+- `recordSupplierPayment(data)` → `POST /api/v1/credits/supplier`
+- `getSupplierCredits(query)` → `GET /api/v1/credits/supplier`
+- `settleSupplierInvoice(id)` → `PATCH /api/v1/credits/supplier/:id/settle`
+- `receiveCustomerPayment(data)` → `POST /api/v1/credits/customer`
+- `getCustomerCredits(query)` → `GET /api/v1/credits/customer`
+
+#### [NEW] [formulation.service.js](file:///d:/Jakir-Vai/POS/src/services/formulation.service.js)
+- `createFormulation(data)` → `POST /api/v1/formulations`
+- `getAllFormulations()` → `GET /api/v1/formulations`
+- `updateFormulation(id, data)` → `PATCH /api/v1/formulations/:id`
+- `deleteFormulation(id)` → `DELETE /api/v1/formulations/:id`
+
+#### [NEW] [settings.service.js](file:///d:/Jakir-Vai/POS/src/services/settings.service.js)
+- `getSettings()` → `GET /api/v1/settings`
+- `updateSettings(data)` → `PATCH /api/v1/settings`
+
+#### [NEW] [cash-adjustment.service.js](file:///d:/Jakir-Vai/POS/src/services/cash-adjustment.service.js)
+- `postAdjustment(data)` → `POST /api/v1/cash-adjustments`
+- `getAdjustments(query)` → `GET /api/v1/cash-adjustments`
+
+#### [NEW] [user.service.js](file:///d:/Jakir-Vai/POS/src/services/user.service.js)
+- User CRUD via `/api/v1/users`
+
+---
+
+### Phase 2: Auth Context & Protected Routes
+
+#### [NEW] [AuthContext.jsx](file:///d:/Jakir-Vai/POS/src/contexts/AuthContext.jsx)
+- React Context for authentication state (user, token, role)
+- Login/Logout functions
+- Auto-refresh token on mount
+- Persist auth state in localStorage
+
+#### [NEW] [LoginPage.jsx](file:///d:/Jakir-Vai/POS/src/features/auth/LoginPage.jsx)
+- Login form (username + password)
+- Calls `POST /api/v1/auth/login`
+- Stores JWT tokens, redirects to SalesPage
+
+#### [MODIFY] [App.jsx](file:///d:/Jakir-Vai/POS/src/App.jsx)
+- Wrap with `AuthProvider`
+- Show LoginPage when not authenticated
+
+#### [MODIFY] [Routes.jsx](file:///d:/Jakir-Vai/POS/src/routes/Routes.jsx)
+- Add `/login` route
+- Add login redirect for unauthenticated users
+
+---
+
+### Phase 3: Custom React Query Hooks
+
+#### [NEW] [useProducts.js](file:///d:/Jakir-Vai/POS/src/hooks/useProducts.js)
+React Query hooks for products CRUD — useQuery + useMutation with proper cache invalidation
+
+#### [NEW] [useSuppliers.js](file:///d:/Jakir-Vai/POS/src/hooks/useSuppliers.js)
+#### [NEW] [useCustomers.js](file:///d:/Jakir-Vai/POS/src/hooks/useCustomers.js)
+#### [NEW] [useSales.js](file:///d:/Jakir-Vai/POS/src/hooks/useSales.js)
+#### [NEW] [usePurchases.js](file:///d:/Jakir-Vai/POS/src/hooks/usePurchases.js)
+#### [NEW] [useExpenses.js](file:///d:/Jakir-Vai/POS/src/hooks/useExpenses.js)
+#### [NEW] [useStock.js](file:///d:/Jakir-Vai/POS/src/hooks/useStock.js)
+#### [NEW] [useCredits.js](file:///d:/Jakir-Vai/POS/src/hooks/useCredits.js)
+#### [NEW] [useFormulations.js](file:///d:/Jakir-Vai/POS/src/hooks/useFormulations.js)
+#### [NEW] [useSettings.js](file:///d:/Jakir-Vai/POS/src/hooks/useSettings.js)
+#### [NEW] [useAuth.js](file:///d:/Jakir-Vai/POS/src/hooks/useAuth.js)
+
+Each hook provides:
+- `useQuery` for fetching with loading/error states
+- `useMutation` for create/update/delete with cache invalidation
+- Toast notifications on success/error via sonner
+
+---
+
+### Phase 4: Page Integration (Connect UI to Hooks)
+
+#### [MODIFY] [AddProductPage.jsx](file:///d:/Jakir-Vai/POS/src/features/inventory/AddProductPage.jsx)
+- Use `useProducts().createProduct` mutation on Save click
+- Show loading state, success toast, error handling
+- Auto-generate productId/productCode if not provided
+
+#### [MODIFY] [ViewProductsPage.jsx](file:///d:/Jakir-Vai/POS/src/features/inventory/ViewProductsPage.jsx)
+- Use `useProducts().products` query to fetch and display from DB
+- Implement search/filter via query params
+- Add inline edit functionality (PATCH endpoint)
+- Show loading skeleton while fetching
+
+#### [MODIFY] [SalesPage.jsx](file:///d:/Jakir-Vai/POS/src/features/sales/SalesPage.jsx)
+- Fetch customers via `useCustomers()` for dropdown
+- Product code lookup via `useProducts()` when entering code
+- Auto-fill product name, price, vat from DB
+- Save sale via `useSales().createSale` mutation
+- Auto-generate billNo from backend
+
+#### [MODIFY] [SalesReturnPage.jsx](file:///d:/Jakir-Vai/POS/src/features/sales/SalesReturnPage.jsx)
+- Use `useSales().createSalesReturn` mutation
+- Product code lookup for auto-fill
+
+#### [MODIFY] [SalesReportPage.jsx](file:///d:/Jakir-Vai/POS/src/features/sales/SalesReportPage.jsx)
+- Replace hardcoded records with `useSales().sales` query
+- Filter by date range and user
+- View individual sale by billNo
+
+#### [MODIFY] [PurchaseInvoicePage.jsx](file:///d:/Jakir-Vai/POS/src/features/purchase/PurchaseInvoicePage.jsx)
+- Fetch suppliers for dropdown via `useSuppliers()`
+- Product barcode lookup for auto-fill
+- Save purchase via `usePurchases().createPurchase` mutation
+
+#### [MODIFY] [ViewPurchaseInvoicePage.jsx](file:///d:/Jakir-Vai/POS/src/features/purchase/ViewPurchaseInvoicePage.jsx)
+- Fetch all purchases from DB
+
+#### [MODIFY] [AddSupplierPage.jsx](file:///d:/Jakir-Vai/POS/src/features/masters/AddSupplierPage.jsx)
+- Add controlled form state
+- Use `useSuppliers().createSupplier` mutation on save
+- Show success/error toasts
+
+#### [MODIFY] [AddCustomerPage.jsx](file:///d:/Jakir-Vai/POS/src/features/masters/AddCustomerPage.jsx)
+- Add controlled form state
+- Use `useCustomers().createCustomer` mutation on save
+
+#### [MODIFY] [AddFormulationPage.jsx](file:///d:/Jakir-Vai/POS/src/features/masters/AddFormulationPage.jsx)
+- Add controlled form state
+- Use `useFormulations().createFormulation` mutation
+
+#### [MODIFY] [AddUserPage.jsx](file:///d:/Jakir-Vai/POS/src/features/masters/AddUserPage.jsx)
+- Use `POST /api/v1/auth/register` for user creation
+- Fetch existing users from `GET /api/v1/users`
+- Remove mock user data
+
+#### [MODIFY] [ExpensePage.jsx](file:///d:/Jakir-Vai/POS/src/features/expense/ExpensePage.jsx)
+- Use `useExpenses()` hooks for postExpense, getAllExpenses, approveExpense
+- Fetch entries from DB instead of local state
+- Get operator role from auth context
+
+#### [MODIFY] [StockPage.jsx](file:///d:/Jakir-Vai/POS/src/features/inventory/StockPage.jsx)
+- Use `useStock()` hook to fetch stock from DB
+- Remove hardcoded dummy data
+
+#### [MODIFY] [StockReturnPage.jsx](file:///d:/Jakir-Vai/POS/src/features/inventory/StockReturnPage.jsx)
+- Use `useStock().processReturn` mutation
+
+#### [MODIFY] [StockCorrectionPage.jsx](file:///d:/Jakir-Vai/POS/src/features/inventory/StockCorrectionPage.jsx)
+- Use `useStock().processCorrection` mutation
+
+#### [MODIFY] [SupplierCreditPage.jsx](file:///d:/Jakir-Vai/POS/src/features/inventory/SupplierCreditPage.jsx)
+- Use `useCredits()` hooks for recordSupplierPayment, settleInvoice
+- Fetch payment history from DB
+- Get operator role from auth context
+
+#### [MODIFY] [CustomerCreditPage.jsx](file:///d:/Jakir-Vai/POS/src/features/inventory/CustomerCreditPage.jsx)
+- Use `useCredits()` hooks for customer payment recording
+
+#### [MODIFY] [CashAdjustmentPage.jsx](file:///d:/Jakir-Vai/POS/src/features/inventory/CashAdjustmentPage.jsx)
+- Use cash adjustment service hooks
+
+#### [MODIFY] [DeleteProductsPage.jsx](file:///d:/Jakir-Vai/POS/src/features/masters/DeleteProductsPage.jsx)
+- Use `useProducts().deleteProduct` mutation
+- Search products from DB
+
+#### [MODIFY] [SettingsPage.jsx](file:///d:/Jakir-Vai/POS/src/features/settings/SettingsPage.jsx)
+- Fetch settings from backend on mount
+- Save settings via PATCH to backend
+- Get operator role from auth context
+
+---
+
+### Phase 5: Toast Notification Integration
+
+Use the existing `sonner` toast library for all API feedback:
+- ✅ Success toasts on create/update/delete
+- ❌ Error toasts on API failures
+- ⏳ Loading states on buttons/forms
+
+---
+
+## Backend API Endpoints Summary
+
+| Module | Base Path | Methods |
+|---|---|---|
+| Auth | `/api/v1/auth` | POST `/login`, `/register`, `/change-password`, `/refresh-token`, `/forget-password`, `/reset-password` |
+| Users | `/api/v1/users` | Standard CRUD |
+| Products | `/api/v1/products` | GET, POST, GET/:id, PATCH/:id, DELETE/:id |
+| Suppliers | `/api/v1/suppliers` | GET, POST, GET/:id, PATCH/:id, DELETE/:id |
+| Customers | `/api/v1/customers` | GET, POST, GET/:id, PATCH/:id, DELETE/:id |
+| Formulations | `/api/v1/formulations` | GET, POST, PATCH/:id, DELETE/:id |
+| Sales | `/api/v1/sales` | POST, GET, GET/:billNo, POST `/return` |
+| Purchases | `/api/v1/purchases` | POST, GET, GET/:id |
+| Expenses | `/api/v1/expenses` | POST, GET, PATCH `/:id/approve` |
+| Stock | `/api/v1/stock` | GET, GET `/returns`, POST `/return`, POST `/correction` |
+| Credits | `/api/v1/credits` | POST/GET `/supplier`, PATCH `/supplier/:id/settle`, POST/GET `/customer` |
+| Cash Adj. | `/api/v1/cash-adjustments` | POST, GET |
+| Settings | `/api/v1/settings` | GET, PATCH |
+| Barcode | `/api/v1/barcode` | TBD |
+| Product Suppliers | `/api/v1/product-suppliers` | TBD |
+| Product Links | `/api/v1/product-links` | TBD |
+| Tickets | `/api/v1/tickets` | TBD |
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> **Authentication Flow**: The backend has JWT auth with roles (admin, manager, cashier). Should I:
+> 1. Create a full login page with authentication flow? (Recommended ✅)
+> 2. Or skip auth for now and send requests without tokens?
+>
+> **I recommend Option 1** — creating a login page and full auth flow so the backend auth middleware works properly.
+
+> [!IMPORTANT]
+> **Backend Running**: Is your backend currently running on `http://localhost:5000`? The frontend is configured to connect to `http://localhost:5000/api/v1`.
+
+> [!NOTE]
+> **Barcode, ProductSupplier, ProductLink, Ticket modules**: I see these in the backend routes but haven't read their detailed implementations yet. I'll integrate them during implementation with the same pattern as the other modules.
+
+---
+
+## Verification Plan
+
+### Automated Tests
+- Run `npm run dev` on frontend and verify no build errors
+- Test each page form submission to verify API calls are made
+- Check browser Network tab for correct request/response payloads
+
+### Manual Verification
+- Create a product via AddProductPage → verify it appears in ViewProductsPage
+- Create a sale → verify it appears in SalesReportPage
+- Create a purchase → verify it appears in ViewPurchaseInvoicePage
+- Add supplier/customer → verify they appear in dropdowns
+- Test login/logout flow

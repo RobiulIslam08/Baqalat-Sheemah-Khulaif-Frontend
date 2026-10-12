@@ -1,0 +1,99 @@
+# POS Frontend ↔ Backend Integration — Walkthrough
+
+## Summary
+
+Successfully connected the entire POS React frontend (20+ pages) to the Express/MongoDB backend (16 modules) with full CRUD operations, JWT authentication, and real-time data persistence.
+
+---
+
+## What Was Built
+
+### Phase 1: API Infrastructure (14 files created)
+
+| File | Purpose |
+|---|---|
+| `services/api.js` | Core HTTP client with JWT token management, auto-refresh on 401, structured error handling, query string builder |
+| `services/auth.service.js` | Login, register, password change, token refresh, logout |
+| `services/product.service.js` | Product CRUD → `/api/v1/products` |
+| `services/supplier.service.js` | Supplier CRUD → `/api/v1/suppliers` |
+| `services/customer.service.js` | Customer CRUD → `/api/v1/customers` |
+| `services/sale.service.js` | Sales + returns → `/api/v1/sales` |
+| `services/purchase.service.js` | Purchase invoices → `/api/v1/purchases` |
+| `services/expense.service.js` | Expenses → `/api/v1/expenses` |
+| `services/stock.service.js` | Stock view/returns/corrections → `/api/v1/stock` |
+| `services/credit.service.js` | Supplier & customer credits → `/api/v1/credits` |
+| `services/formulation.service.js` | Formulations CRUD → `/api/v1/formulations` |
+| `services/settings.service.js` | Settings get/update → `/api/v1/settings` |
+| `services/cash-adjustment.service.js` | Cash adjustments → `/api/v1/cash-adjustments` |
+| `services/user.service.js` | User management → `/api/v1/users` |
+
+### Phase 2: Authentication System (4 files)
+
+- **`contexts/AuthContext.jsx`** — React context providing user/role state, login/logout, persistence via localStorage
+- **`features/auth/LoginPage.jsx`** — Professional login page with dark gradient, password eye toggle, loading spinner, bilingual support
+- **`App.jsx`** — Wrapped with `AuthProvider`, configured React Query defaults
+- **`routes/Routes.jsx`** — `ProtectedRoute` wrapper redirects unauthenticated users to `/login`
+
+### Phase 3: React Query Hooks (12 files)
+
+Each hook provides `useQuery` for fetching (with loading/error states) and `useMutation` for mutations (with cache invalidation and toast notifications):
+
+`useProducts`, `useSuppliers`, `useCustomers`, `useSales`, `usePurchases`, `useExpenses`, `useStock`, `useCredits`, `useFormulations`, `useSettings`, `useCashAdjustments`, `useUsers`
+
+### Phase 4: Page Integration (20 pages modified)
+
+Every page was rewired from local/mock state to real backend API calls:
+
+| Page | Key Integration |
+|---|---|
+| **AddProductPage** | `POST /products` on save, form reset on success |
+| **ViewProductsPage** | `GET /products` with search filters, inline edit via `PATCH` |
+| **SalesPage** | Customer dropdown from DB, product code auto-lookup, `POST /sales` |
+| **SalesReturnPage** | Product lookup, `POST /sales/return` |
+| **SalesReportPage** | `GET /sales` with date filters, view bill detail |
+| **PurchaseInvoicePage** | Supplier dropdown, barcode lookup, `POST /purchases` |
+| **ViewPurchaseInvoicePage** | `GET /purchases` with multiple search modes |
+| **AddSupplierPage** | `POST /suppliers` with form reset |
+| **AddCustomerPage** | `POST /customers` with form reset |
+| **AddFormulationPage** | `POST /formulations` with form reset |
+| **AddUserPage** | `POST /auth/register`, `GET /users` for list |
+| **ExpensePage** | `POST /expenses`, `GET /expenses`, `PATCH /:id/approve` |
+| **StockPage** | `GET /stock` with search filters |
+| **StockReturnPage** | Product lookup, `POST /stock/return` |
+| **StockCorrectionPage** | Product lookup, `POST /stock/correction` |
+| **SupplierCreditPage** | `POST /credits/supplier`, list from DB |
+| **CustomerCreditPage** | Customer dropdown, `POST /credits/customer` |
+| **CashAdjustmentPage** | `POST /cash-adjustments`, list from DB |
+| **DeleteProductsPage** | Search product, `DELETE /products/:id` |
+| **SettingsPage** | `GET /settings` on mount, `PATCH /settings` on save |
+
+---
+
+## Verification
+
+- ✅ Vite dev server starts clean with zero build/compile errors
+- ✅ All imports resolve correctly
+- ✅ Login page renders at `/login`
+- ✅ Protected routes redirect to `/login` when not authenticated
+
+## Architecture
+
+```
+Frontend (React)                     Backend (Express/MongoDB)
+─────────────────                    ─────────────────────────
+Page Component                       
+  └─ React Query Hook                
+      └─ Service Module              
+          └─ api.js (fetch)  ──→  API Route → Controller → Service → Model → MongoDB
+              ↑                       
+          JWT Token (localStorage)    
+```
+
+## How to Test End-to-End
+
+1. Start backend: `cd POS-Backend && npm run dev` (port 5000)
+2. Start frontend: `cd POS && npm run dev` (port 6100)
+3. Register a user via backend or use existing credentials
+4. Login at `http://localhost:6100/login`
+5. Add a product → verify it appears in View Products
+6. Create a sale → verify it appears in Sales Report

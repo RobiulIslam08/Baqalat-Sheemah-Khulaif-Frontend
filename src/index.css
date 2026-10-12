@@ -1,0 +1,318 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 220 20% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 10%;
+
+    --primary: 160 84% 28%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 220 20% 10%;
+
+    --muted: 210 15% 94%;
+    --muted-foreground: 220 10% 46%;
+
+    --accent: 200 80% 94%;
+    --accent-foreground: 200 80% 24%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 72% 29%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 214 20% 88%;
+    --input: 214 20% 88%;
+    --ring: 160 84% 28%;
+
+    --radius: 0.5rem;
+
+    --nav-bg: 220 20% 14%;
+    --nav-foreground: 0 0% 96%;
+    --nav-hover: 220 20% 22%;
+    --nav-active: 160 84% 28%;
+
+    --table-header: 220 14% 92%;
+    --table-row-alt: 210 20% 97%;
+    --table-border: 214 20% 88%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 220 20% 7%;
+    --foreground: 210 20% 96%;
+    --card: 220 20% 10%;
+    --card-foreground: 210 20% 96%;
+    --popover: 220 20% 10%;
+    --popover-foreground: 210 20% 96%;
+    --primary: 160 84% 39%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 16%;
+    --secondary-foreground: 210 20% 96%;
+    --muted: 220 14% 16%;
+    --muted-foreground: 215 14% 60%;
+    --accent: 200 60% 16%;
+    --accent-foreground: 200 60% 80%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 220 14% 20%;
+    --input: 220 14% 20%;
+    --ring: 160 84% 39%;
+    --nav-bg: 220 20% 8%;
+    --nav-foreground: 0 0% 92%;
+    --nav-hover: 220 20% 14%;
+    --nav-active: 160 84% 39%;
+    --table-header: 220 14% 14%;
+    --table-row-alt: 220 14% 9%;
+    --table-border: 220 14% 20%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', 'IBM Plex Sans Arabic', sans-serif;
+  }
+
+  [dir="rtl"] body,
+  [dir="rtl"] {
+    font-family: 'IBM Plex Sans Arabic', 'Inter', sans-serif;
+  }
+}
+
+@layer components {
+  .pos-input {
+    @apply w-full rounded-md border border-input bg-card px-2 py-2 text-sm
+           focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-primary
+           transition-colors placeholder:text-muted-foreground;
+  }
+
+  /* Hide number input spinners for better visibility in small fields */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+
+  .pos-select {
+    @apply w-full rounded-md border border-input bg-card px-3 py-2 text-sm
+           focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-primary
+           transition-colors appearance-none cursor-pointer;
+  }
+
+  .pos-btn {
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium
+           transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring/30
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .pos-btn-primary {
+    @apply pos-btn bg-primary text-primary-foreground hover:opacity-90 active:scale-[0.98];
+  }
+
+  .pos-btn-secondary {
+    @apply pos-btn bg-secondary text-secondary-foreground hover:bg-muted active:scale-[0.98];
+  }
+
+  .pos-btn-destructive {
+    @apply pos-btn bg-destructive text-destructive-foreground hover:opacity-90;
+  }
+
+  .pos-table {
+    @apply w-full text-sm border-collapse;
+  }
+
+  .pos-table th {
+    @apply bg-[hsl(var(--table-header))] px-3 py-2.5 text-left font-semibold
+           text-foreground border border-[hsl(var(--table-border))];
+  }
+
+  [dir="rtl"] .pos-table th {
+    @apply text-right;
+  }
+
+  .pos-table td {
+    @apply px-2 py-1.5 border border-[hsl(var(--table-border))];
+  }
+
+  .pos-table input.pos-input {
+    @apply py-1 px-1.5 text-xs h-8;
+  }
+
+  .pos-table tr:nth-child(even) {
+    @apply bg-[hsl(var(--table-row-alt))];
+  }
+
+  .pos-card {
+    @apply bg-card rounded-lg border border-border shadow-sm;
+  }
+
+  .pos-label {
+    @apply block text-sm font-medium text-foreground mb-1;
+  }
+
+  .pos-page-title {
+    @apply text-lg font-semibold text-primary mb-4;
+  }
+
+  .pos-summary-bar {
+    @apply grid grid-cols-2 md:grid-cols-4 gap-0 rounded-lg overflow-hidden border border-border;
+  }
+
+  .pos-summary-cell {
+    @apply p-3 text-center border-r border-border last:border-r-0;
+  }
+
+  [dir="rtl"] .pos-summary-cell {
+    @apply border-r-0 border-l border-border last:border-l-0;
+  }
+
+  .pos-summary-cell-header {
+    @apply bg-[hsl(var(--table-header))] font-semibold text-sm;
+  }
+
+  .pos-summary-cell-value {
+    @apply bg-accent/30 font-bold text-destructive text-lg;
+  }
+
+  .pos-amount {
+    @apply text-destructive font-bold;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   GLOBAL PRINT STYLES — Sales Invoice Receipt (.receipt-* classes)
+   শুধু @media print এ কাজ করে, screen এ কোনো effect নেই
+   ══════════════════════════════════════════════════════════════ */
+
+@media print {
+  /* Store name — বড় ও Bold */
+  .receipt-store-name {
+    font-size: 20px !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.3px !important;
+  }
+
+  /* Sub-text (address, CR, VAT, phone) */
+  .receipt-subtext {
+    font-size: 13px !important;
+    margin: 0 0 2px 0 !important;
+  }
+
+  /* Dividers */
+  .receipt-divider,
+  .receipt-divider-arrow {
+    font-size: 12px !important;
+    margin: 3px 0 !important;
+  }
+
+  /* Invoice info box */
+  .receipt-invoice-box {
+    border: 1.5px solid #000 !important;
+    padding: 6px !important;
+    margin: 5px 0 !important;
+  }
+
+  /* Invoice title */
+  .receipt-invoice-title {
+    font-size: 16px !important;
+    font-weight: 900 !important;
+    margin-bottom: 4px !important;
+    padding-bottom: 3px !important;
+  }
+
+  /* Invoice rows (date, bill no, etc.) */
+  .receipt-invoice-row {
+    font-size: 14px !important;
+    margin-bottom: 2px !important;
+    padding: 1px 0 !important;
+  }
+
+  /* Items table */
+  .receipt-items-table {
+    font-size: 14px !important;
+    margin: 5px 0 !important;
+  }
+  .receipt-items-table th {
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    padding: 4px 3px !important;
+    border-top: 1.5px solid #000 !important;
+    border-bottom: 1.5px solid #000 !important;
+  }
+  .receipt-items-table td {
+    font-size: 14px !important;
+    padding: 4px 3px !important;
+    border-bottom: 1px dotted #999 !important;
+  }
+
+  /* Summary box */
+  .receipt-summary-box {
+    border: 1.5px solid #000 !important;
+    padding: 6px !important;
+    margin: 5px 0 !important;
+  }
+  .receipt-summary-row {
+    font-size: 14px !important;
+    margin-bottom: 2px !important;
+    padding: 1px 0 !important;
+  }
+
+  /* Payment rows */
+  .receipt-payment-row {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    margin-bottom: 2px !important;
+    padding: 2px 4px !important;
+  }
+
+  /* QR code */
+  .receipt-qr-img {
+    width: 130px !important;
+    height: 130px !important;
+  }
+  .receipt-qr-text {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    margin-top: 3px !important;
+  }
+}
