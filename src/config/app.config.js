@@ -8,9 +8,16 @@
 const LOCAL_API_URL = "http://localhost:5100/api/v1";
 const LIVE_API_URL = "https://baqalat-sheemah-khulaif-backend.vercel.app/api/v1";
 
+function cleanApiUrl(url) {
+  return String(url || "")
+    .trim()
+    .replace(/([^:]\/)\/+/g, "$1")
+    .replace(/\/+$/, "");
+}
+
 /** Prefer VITE_API_BASE_URL. Ignore a localhost value in production builds. */
 export function resolveApiBaseUrl() {
-  const fromEnv = String(import.meta.env.VITE_API_BASE_URL || "").trim().replace(/\/+$/, "");
+  const fromEnv = cleanApiUrl(import.meta.env.VITE_API_BASE_URL);
   const pointsAtLocalhost = !fromEnv || /localhost|127\.0\.0\.1/i.test(fromEnv);
   if (import.meta.env.DEV) return fromEnv || LOCAL_API_URL;
   if (!pointsAtLocalhost) return fromEnv;
