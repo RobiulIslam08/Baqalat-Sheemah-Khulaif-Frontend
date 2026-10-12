@@ -82,7 +82,7 @@ export default function LicensePage() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `pos-backup-${new Date().toISOString().slice(0, 10)}.db`;
+      link.download = `pos-backup-${new Date().toISOString().slice(0, 10)}.json`;
       link.click();
       URL.revokeObjectURL(url);
       showSuccess(text("Backup downloaded successfully", "تم تنزيل النسخة الاحتياطية بنجاح"));

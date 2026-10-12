@@ -22,4 +22,9 @@ export const settingsService = {
   resetDemo() {
     return apiPost(`${BASE}/reset-demo`, {});
   },
+
+  /** Delete products, sales, and other business data. Keeps the current user, settings, and license. */
+  deleteAll() {
+    return apiPost(`${BASE}/delete-all`, {});
+  },
 };

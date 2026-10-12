@@ -43,7 +43,7 @@ export default function BackupPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${name}.db`;
+      a.download = `${name}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -145,7 +145,7 @@ export default function BackupPage() {
         <button className="pos-btn-secondary gap-1" onClick={() => fileInputRef.current?.click()} disabled={!canBackup}>
           <RotateCcw size={14} /> {lang === "ar" ? "استعادة" : "Restore"}
         </button>
-        <input ref={fileInputRef} type="file" accept=".db" className="hidden" onChange={handleRestoreFileChange} />
+        <input ref={fileInputRef} type="file" accept=".json,application/json" className="hidden" onChange={handleRestoreFileChange} />
         <button className="pos-btn-primary gap-1" onClick={handleBackup} disabled={isBackingUp || !canBackup}>
           {isBackingUp ? <Loader2 size={14} className="animate-spin" /> : <DatabaseBackup size={14} />}
           {lang === "ar" ? "إنشاء نسخة" : "Create Backup"}
@@ -190,9 +190,8 @@ export default function BackupPage() {
       <div className="pos-card p-4">
         <div className="text-sm font-semibold mb-2">{lang === "ar" ? "دليل النسخ الاحتياطي" : "Backup Guide"}</div>
         <div className="text-xs text-muted-foreground space-y-1">
-          <p>• {lang === "ar" ? "ملف واحد (.db) فيه كل بيانات هذا الجهاز: منتجات، مبيعات، مشتريات، مستخدمين." : "One .db file holds everything on this PC: products, sales, purchases, and users."}</p>
-          <p>• {lang === "ar" ? "احفظ الملف على فلاشة. إذا تعطل الجهاز، ثبّت البرنامج على جهاز جديد ثم استعد الملف." : "Keep the file on a USB drive. If this PC fails, install the app on a new PC and restore the file."}</p>
-          <p>• {lang === "ar" ? "عند فتح البرنامج كل يوم تُحفظ نسخة تلقائية لآخر 7 أيام على نفس الجهاز." : "Each day the app keeps an automatic copy for the last 7 days on this PC."}</p>
+          <p>• {lang === "ar" ? "ملف واحد (.json) فيه كل بيانات المتجر: منتجات، مبيعات، مشتريات، مستخدمين." : "One .json file holds the store data: products, sales, purchases, and users."}</p>
+          <p>• {lang === "ar" ? "احفظ الملف في مكان آمن. للاستعادة اختر نفس ملف JSON." : "Keep the file somewhere safe. To restore, choose that same JSON file."}</p>
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuthContext } from "@/contexts/AuthContext";
-import { useSettings, useUpdateSettings, useResetDemo } from "@/hooks/useSettings";
+import { useSettings, useUpdateSettings, useResetDemo, useDeleteAllData } from "@/hooks/useSettings";
 import { Save, ShieldCheck, Printer, Loader2, X, CheckCircle2, AlertCircle, Trash2 } from "lucide-react";
 import { apiGet } from "@/services/api";
 
@@ -15,6 +15,7 @@ export default function SettingsPage() {
   const { data: settings, isLoading } = useSettings();
   const updateSettings = useUpdateSettings();
   const resetDemo = useResetDemo();
+  const deleteAll = useDeleteAllData();
 
   const [form, setForm] = useState({
     storeName: "",
@@ -33,6 +34,7 @@ export default function SettingsPage() {
   const [isDiagnosing, setIsDiagnosing] = useState(false);
   const [diagResult, setDiagResult] = useState(null);
   const [resetOpen, setResetOpen] = useState(false);
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false);
 
   useEffect(() => {
     if (settings) setForm((p) => ({ ...p, ...settings }));
@@ -276,6 +278,52 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {canSave && (
+        <div className="pos-card p-4 md:p-5 border-destructive/40">
+          <h3 className="font-semibold mb-2">{lang === "ar" ? "حذف كل البيانات" : "Delete all data"}</h3>
+          <p className="text-sm text-muted-foreground mb-3">
+            {lang === "ar"
+              ? "يحذف المنتجات والمبيعات والمشتريات والعملاء والموردين والمستخدمين الآخرين. يبقى حسابك الحالي وإعدادات المتجر والرخصة."
+              : "Deletes products, sales, purchases, customers, suppliers, and every other user. Your current account, store settings, and the license stay."}
+          </p>
+          <button className="pos-btn-secondary gap-1 text-destructive" onClick={() => setDeleteAllOpen(true)}>
+            <Trash2 size={14} /> {lang === "ar" ? "حذف كل البيانات" : "Delete all data"}
+          </button>
+        </div>
+      )}
+
+      {deleteAllOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-card w-full max-w-md rounded-lg shadow-xl overflow-hidden">
+            <div className="p-4 border-b flex justify-between items-center bg-accent/30">
+              <h3 className="font-bold">{lang === "ar" ? "تأكيد حذف كل البيانات" : "Confirm delete all data"}</h3>
+              <button onClick={() => setDeleteAllOpen(false)} className="hover:opacity-70" disabled={deleteAll.isPending}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-5 text-sm text-muted-foreground space-y-2">
+              <p>
+                {lang === "ar"
+                  ? "سيتم حذف بيانات المتجر نهائياً. لا يمكن التراجع عن هذا."
+                  : "Store records will be deleted permanently. This cannot be undone."}
+              </p>
+            </div>
+            <div className="p-4 border-t flex justify-end gap-2">
+              <button className="pos-btn-secondary" onClick={() => setDeleteAllOpen(false)} disabled={deleteAll.isPending}>
+                {lang === "ar" ? "إلغاء" : "Cancel"}
+              </button>
+              <button
+                className="pos-btn-primary gap-1"
+                disabled={deleteAll.isPending}
+                onClick={() => deleteAll.mutate(undefined, { onSuccess: () => setDeleteAllOpen(false) })}
+              >
+                {deleteAll.isPending ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                {lang === "ar" ? "نعم، احذف الكل" : "Yes, delete all data"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {resetOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-card w-full max-w-md rounded-lg shadow-xl overflow-hidden">

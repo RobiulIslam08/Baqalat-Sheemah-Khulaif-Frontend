@@ -25,3 +25,17 @@ export function useResetDemo() {
     },
   });
 }
+
+export function useDeleteAllData() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => settingsService.deleteAll(),
+    onSuccess: () => {
+      qc.invalidateQueries();
+      showSuccess("All business data deleted. Your account, store settings, and license were kept.");
+    },
+    onError: (err) => {
+      showError(err, "Failed to delete all data");
+    },
+  });
+}
