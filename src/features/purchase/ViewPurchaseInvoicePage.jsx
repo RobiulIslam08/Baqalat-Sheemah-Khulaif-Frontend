@@ -165,7 +165,7 @@ export default function ViewPurchaseInvoicePage() {
             <span>TOTAL / الإجمالي</span>
             <span>{Number(selectedPurchase.totalAmount).toFixed(2)}</span>
           </div>
-          <div className="receipt-summary-row" style={{fontSize:'12px', opacity:'0.75', marginTop:'3px'}}>
+          <div className="receipt-summary-row" style={{fontSize:'12px', fontWeight:500, marginTop:'3px'}}>
             <span>Total Items / عدد الأصناف</span>
             <span>{selectedPurchase.items?.length || 0}</span>
           </div>
@@ -188,6 +188,10 @@ export default function ViewPurchaseInvoicePage() {
       }
 
       @media print {
+        * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
         /* Hide everything */
         body * {
           visibility: hidden !important;
@@ -196,6 +200,9 @@ export default function ViewPurchaseInvoicePage() {
         #purchase-print-receipt,
         #purchase-print-receipt * {
           visibility: visible !important;
+          opacity: 1 !important;
+          color: #000 !important;
+          -webkit-font-smoothing: antialiased !important;
         }
         #purchase-print-receipt {
           display: block !important;
@@ -208,6 +215,7 @@ export default function ViewPurchaseInvoicePage() {
           background: #fff !important;
           color: #000 !important;
           font-family: 'IBM Plex Sans Arabic', 'Inter', Arial, sans-serif !important;
+          font-weight: 500 !important;
           font-size: 15px !important;
           line-height: 1.6 !important;
           box-sizing: border-box;

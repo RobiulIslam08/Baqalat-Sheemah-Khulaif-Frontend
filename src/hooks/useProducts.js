@@ -22,6 +22,17 @@ export function useProducts(params = {}, options = {}) {
   });
 }
 
+/** Fetch the next auto-generated serial product ID. */
+export function useNextProductId(options = {}) {
+  return useQuery({
+    queryKey: [QUERY_KEY, "next-id"],
+    queryFn: () => productService.getNextId(),
+    select: (res) => res?.data?.nextProductId || "",
+    staleTime: 0,
+    ...options,
+  });
+}
+
 /** Fetch a single product by ID. */
 export function useProduct(id, options = {}) {
   return useQuery({
@@ -40,6 +51,7 @@ export function useCreateProduct() {
     mutationFn: (data) => productService.create(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [QUERY_KEY] });
+      qc.invalidateQueries({ queryKey: [QUERY_KEY, "next-id"] });
       showSuccess("Product created successfully ✅");
     },
     onError: (err) => {

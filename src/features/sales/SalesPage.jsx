@@ -8,6 +8,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { Plus, Trash2, Loader2 } from "lucide-react";
 import QRCode from "qrcode";
 import { showError } from "@/lib/toast-helpers";
+import { printReceipt } from "@/lib/printReceipt";
 import { invoiceLanguageOf, receiptDir, receiptItemName, receiptPayment, receiptQrLabel, receiptSaleType, receiptText, receiptVatLabel } from "./receiptLanguage";
 
 function lineFigures(qty, dbPrice, boxQty, type, vatPercent) {
@@ -308,8 +309,8 @@ export default function SalesPage() {
           });
 
           // 3. Print receipt and reset forms after window triggers
-          setTimeout(() => {
-            window.print();
+          setTimeout(async () => {
+            await printReceipt();
             setPrintData(null);
             setQrBase64("");
             resetForm();
@@ -570,7 +571,7 @@ export default function SalesPage() {
             <span>{receiptText(invoiceMode, "المبلغ المستحق", "Amount Due")}</span>
             <span>{Number(printData.netAmount).toFixed(2)}</span>
           </div>
-          <div className="receipt-summary-row text-xs opacity-80 mt-1">
+          <div className="receipt-summary-row text-xs mt-1">
             <span>{receiptText(invoiceMode, "إجمالي الكميات", "Total Qty")}</span>
             <span>{printData.items.reduce((sum, item) => sum + Number(item.quantity), 0).toFixed(1)}</span>
           </div>
@@ -597,11 +598,19 @@ export default function SalesPage() {
     <style>{`
       /* Hide standard app elements when printing */
       @media print {
+        * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
         body * {
           visibility: hidden !important;
         }
         #print-receipt, #print-receipt * {
           visibility: visible !important;
+          opacity: 1 !important;
+          color: #000 !important;
+          -webkit-font-smoothing: antialiased !important;
+          text-rendering: optimizeLegibility !important;
         }
         #print-receipt {
           position: absolute;
@@ -613,6 +622,7 @@ export default function SalesPage() {
           background: #fff !important;
           color: #000 !important;
           font-family: 'IBM Plex Sans Arabic', 'Inter', sans-serif !important;
+          font-weight: 500 !important;
           box-sizing: border-box;
           font-size: 15px !important;
           line-height: 1.5 !important;
@@ -646,7 +656,7 @@ export default function SalesPage() {
       .receipt-subtext {
         font-size: 13px;
         margin: 0 0 2px 0;
-        opacity: 0.9;
+        font-weight: 500;
       }
       .receipt-divider-arrow {
         text-align: center;
@@ -678,6 +688,7 @@ export default function SalesPage() {
         display: flex;
         justify-content: space-between;
         font-size: 14px;
+        font-weight: 500;
         margin-bottom: 2px;
         padding: 1px 0;
       }
@@ -708,6 +719,7 @@ export default function SalesPage() {
         display: flex;
         justify-content: space-between;
         font-size: 14px;
+        font-weight: 500;
         margin-bottom: 2px;
         padding: 1px 0;
       }

@@ -4,9 +4,28 @@ import { useSales, useSaleByBillNo } from "@/hooks/useSales";
 import { useProducts } from "@/hooks/useProducts";
 import { useUsers } from "@/hooks/useUsers";
 import { useSettings } from "@/hooks/useSettings";
-import { Search, Eye, Printer, Loader2, X, ReceiptText, RotateCcw, AlertCircle } from "lucide-react";
+import { Search, Eye, Printer, Loader2, X, ReceiptText, RotateCcw, AlertCircle, FileDown } from "lucide-react";
 import QRCode from "qrcode";
 import { invoiceLanguageOf, receiptDir, receiptItemName, receiptPayment, receiptQrLabel, receiptSaleType, receiptText, receiptVatLabel } from "./receiptLanguage";
+import { downloadMonthlySalesPdf } from "./monthlySalesPdf";
+import { saleService } from "@/services/sale.service";
+import { showError } from "@/lib/toast-helpers";
+import { printReceipt } from "@/lib/printReceipt";
+
+function currentMonthValue() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/** "YYYY-MM" -> { from: "YYYY-MM-01", to: "YYYY-MM-<lastDay>" } */
+function monthRange(month) {
+  if (!month) return { from: "", to: "" };
+  const [y, m] = month.split("-").map(Number);
+  const from = `${month}-01`;
+  const lastDay = new Date(y, m, 0).getDate();
+  const to = `${month}-${String(lastDay).padStart(2, "0")}`;
+  return { from, to };
+}
 
 const TAB_SALES = "SALE";
 const TAB_RETURNS = "RETURN";
@@ -20,15 +39,26 @@ export default function SalesReportPage() {
   // Tabs
   const [activeTab, setActiveTab] = useState(TAB_SALES);
 
+  // Monthly report selector — the table below always reflects this month
+  const [reportMonth, setReportMonth] = useState(currentMonthValue());
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const initialRange = monthRange(currentMonthValue());
+
   // Filters
   const [user, setUser] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [fromDate, setFromDate] = useState(initialRange.from);
+  const [toDate, setToDate] = useState(initialRange.to);
 
   // Pagination: 100 per page
   const PAGE_SIZE = 100;
   const [page, setPage] = useState(1);
-  const [searchParams, setSearchParams] = useState({ type: TAB_SALES, page: 1, limit: PAGE_SIZE });
+  const [searchParams, setSearchParams] = useState({
+    type: TAB_SALES,
+    page: 1,
+    limit: PAGE_SIZE,
+    fromDate: initialRange.from,
+    toDate: initialRange.to,
+  });
 
   // Bill detail viewer
   const [viewBillNo, setViewBillNo] = useState(null);
@@ -125,8 +155,8 @@ export default function SalesReportPage() {
   // Elegant print trigger that fires when printing is requested, details are loaded, and QR is ready
   useEffect(() => {
     if (isPrinting && saleDetail && qrBase64) {
-      const timer = setTimeout(() => {
-        window.print();
+      const timer = setTimeout(async () => {
+        await printReceipt();
         setIsPrinting(false);
       }, 400); // small delay to ensure full render
       return () => clearTimeout(timer);
@@ -170,6 +200,51 @@ export default function SalesReportPage() {
     setIsPrinting(true);
   };
 
+  // Selecting a month immediately filters the table below to that month,
+  // with its totals, across all tabs/pages.
+  const applyMonth = (month) => {
+    setReportMonth(month);
+    const { from, to } = monthRange(month);
+    setFromDate(from);
+    setToDate(to);
+    setPage(1);
+    const params = { type: activeTab, page: 1, limit: PAGE_SIZE, fromDate: from, toDate: to };
+    if (user) params.createdBy = user;
+    setSearchParams(params);
+  };
+
+  const handleDownloadMonthlyPdf = async () => {
+    if (!reportMonth) return;
+    setPdfLoading(true);
+    try {
+      const { from: fromDate, to: toDate } = monthRange(reportMonth);
+
+      const res = await saleService.getAll({
+        type: activeTab,
+        fromDate,
+        toDate,
+        limit: 5000,
+      });
+      const monthSales = res?.data || [];
+
+      if (monthSales.length === 0) {
+        showError(null, lang === "ar" ? "لا توجد بيانات لهذا الشهر" : "No records found for this month");
+        return;
+      }
+
+      downloadMonthlySalesPdf({
+        month: reportMonth,
+        sales: monthSales,
+        settings,
+        isReturn: !isSaleTab,
+      });
+    } catch (err) {
+      showError(err, "Failed to generate the monthly PDF report");
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
   const isSaleTab = activeTab === TAB_SALES;
   const invoiceMode = invoiceLanguageOf(settings);
   const nameAlign = invoiceMode === "en" ? "text-left" : "text-right";
@@ -203,6 +278,34 @@ export default function SalesReportPage() {
           <RotateCcw size={15} />
           {lang === "ar" ? "مرتجعات المبيعات" : "Sales Returns"}
         </button>
+      </div>
+
+      {/* Monthly PDF Report */}
+      <div className="pos-card p-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 flex-wrap">
+          <div>
+            <label className="pos-label">{lang === "ar" ? "التقرير الشهري" : "Monthly Report"}</label>
+            <input
+              type="month"
+              className="pos-input w-44"
+              value={reportMonth}
+              onChange={(e) => applyMonth(e.target.value)}
+            />
+          </div>
+          <button
+            className="pos-btn-primary gap-1"
+            onClick={handleDownloadMonthlyPdf}
+            disabled={pdfLoading || !reportMonth}
+          >
+            {pdfLoading ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
+            {lang === "ar" ? "تنزيل PDF" : "Download PDF"}
+          </button>
+          <span className="text-xs text-muted-foreground">
+            {lang === "ar"
+              ? "يعرض الجدول أدناه بيانات الشهر المحدد مع الإجمالي، ويمكنك أيضاً تنزيله كملف PDF"
+              : "The table below shows this month's records with the total, and you can also download it as a PDF"}
+          </span>
+        </div>
       </div>
 
       {/* Filters */}
@@ -701,10 +804,10 @@ export default function SalesReportPage() {
               <span>{receiptText(invoiceMode, "المبلغ المستحق", "Amount Due")}</span>
               <span>{Number(saleDetail.netAmount).toFixed(2)}</span>
             </div>
-            <div className="receipt-summary-row text-xs opacity-80 mt-1">
-              <span>{receiptText(invoiceMode, "إجمالي الكميات", "Total Qty")}</span>
-              <span>{(saleDetail.items || []).reduce((sum, item) => sum + Number(item.quantity), 0).toFixed(1)}</span>
-            </div>
+          <div className="receipt-summary-row text-xs mt-1">
+            <span>{receiptText(invoiceMode, "إجمالي الكميات", "Total Qty")}</span>
+            <span>{(saleDetail.items || []).reduce((sum, item) => sum + Number(item.quantity), 0).toFixed(1)}</span>
+          </div>
           </div>
 
           <div className="receipt-divider">------------------------------------------</div>
@@ -728,11 +831,19 @@ export default function SalesReportPage() {
       <style>{`
         /* Hide standard app elements when printing */
         @media print {
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
           body * {
             visibility: hidden !important;
           }
           #print-receipt, #print-receipt * {
             visibility: visible !important;
+            opacity: 1 !important;
+            color: #000 !important;
+            -webkit-font-smoothing: antialiased !important;
+            text-rendering: optimizeLegibility !important;
           }
           #print-receipt {
             position: absolute;
@@ -744,6 +855,7 @@ export default function SalesReportPage() {
             background: #fff !important;
             color: #000 !important;
             font-family: 'IBM Plex Sans Arabic', 'Inter', sans-serif !important;
+            font-weight: 500 !important;
             box-sizing: border-box;
             font-size: 15px !important;
             line-height: 1.5 !important;
@@ -777,7 +889,7 @@ export default function SalesReportPage() {
         .receipt-subtext {
           font-size: 13px;
           margin: 0 0 2px 0;
-          opacity: 0.9;
+          font-weight: 500;
         }
         .receipt-divider-arrow {
           text-align: center;
@@ -809,6 +921,7 @@ export default function SalesReportPage() {
           display: flex;
           justify-content: space-between;
           font-size: 14px;
+          font-weight: 500;
           margin-bottom: 2px;
           padding: 1px 0;
         }
@@ -839,6 +952,7 @@ export default function SalesReportPage() {
           display: flex;
           justify-content: space-between;
           font-size: 14px;
+          font-weight: 500;
           margin-bottom: 2px;
           padding: 1px 0;
         }
