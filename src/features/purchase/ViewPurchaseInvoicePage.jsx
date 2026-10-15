@@ -195,7 +195,7 @@ export default function ViewPurchaseInvoicePage() {
 
       @media print {
         @page {
-          size: auto;
+          size: 58mm auto;
           margin: 0mm;
         }
         * {
@@ -203,6 +203,9 @@ export default function ViewPurchaseInvoicePage() {
           print-color-adjust: exact !important;
         }
         html, body {
+          direction: ltr !important;
+          width: 58mm !important;
+          max-width: 58mm !important;
           height: auto !important;
           min-height: 0 !important;
           margin: 0 !important;
@@ -226,10 +229,9 @@ export default function ViewPurchaseInvoicePage() {
         #purchase-print-receipt {
           display: block !important;
           position: static !important;
-          width: 70mm !important;
-          max-width: 70mm !important;
-          min-width: 70mm !important;
-          padding: 1mm 2mm !important;
+          width: 58mm !important;
+          max-width: 58mm !important;
+          padding: 1.5mm 1.5mm 4mm 1.5mm !important;
           margin: 0 !important;
           background: #fff !important;
           color: #000 !important;
@@ -241,7 +243,7 @@ export default function ViewPurchaseInvoicePage() {
           break-after: avoid !important;
           page-break-inside: avoid !important;
           break-inside: avoid !important;
-          overflow: hidden !important;
+          overflow: visible !important;
         }
       }
     `}</style>

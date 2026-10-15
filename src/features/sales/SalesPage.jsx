@@ -678,7 +678,7 @@ export default function SalesPage() {
       /* Hide standard app elements when printing */
       @media print {
         @page {
-          size: auto;
+          size: 58mm auto;
           margin: 0mm;
         }
         * {
@@ -686,6 +686,9 @@ export default function SalesPage() {
           print-color-adjust: exact !important;
         }
         html, body {
+          direction: ltr !important;
+          width: 58mm !important;
+          max-width: 58mm !important;
           height: auto !important;
           min-height: 0 !important;
           margin: 0 !important;
@@ -708,10 +711,9 @@ export default function SalesPage() {
         #print-receipt {
           display: block !important;
           position: static !important;
-          width: 70mm !important;
-          max-width: 70mm !important;
-          min-width: 70mm !important;
-          padding: 2mm 2.5mm 6mm 2.5mm !important;
+          width: 58mm !important;
+          max-width: 58mm !important;
+          padding: 1.5mm 1.5mm 4mm 1.5mm !important;
           margin: 0 !important;
           background: #fff !important;
           color: #000 !important;
@@ -723,7 +725,7 @@ export default function SalesPage() {
           break-after: avoid !important;
           page-break-inside: avoid !important;
           break-inside: avoid !important;
-          overflow: hidden !important;
+          overflow: visible !important;
         }
       }
 
@@ -748,10 +750,10 @@ export default function SalesPage() {
       .receipt-logo {
         display: block !important;
         margin: 0 auto 8px auto !important;
-        width: 48mm !important;
-        height: 48mm !important;
-        max-width: 48mm !important;
-        max-height: 48mm !important;
+        width: 40mm !important;
+        height: auto !important;
+        max-width: 40mm !important;
+        max-height: 40mm !important;
         object-fit: contain !important;
         image-rendering: high-quality !important;
       }
@@ -870,17 +872,20 @@ export default function SalesPage() {
         width: 100% !important;
       }
       .receipt-qr-img {
-        width: 105px !important;
-        height: 105px !important;
+        width: 140px !important;
+        height: 140px !important;
+        max-width: 100% !important;
         display: block !important;
         margin: 0 auto !important;
       }
       .receipt-bilingual {
         display: inline-flex;
+        flex-wrap: wrap;
         align-items: baseline;
         direction: rtl;
         gap: 2px;
-        white-space: nowrap;
+        max-width: 100%;
+        white-space: normal;
       }
       .receipt-line-ar {
         display: inline;
@@ -904,10 +909,12 @@ export default function SalesPage() {
       }
       .receipt-meta-bilingual {
         display: inline-flex;
+        flex-wrap: wrap;
         align-items: baseline;
         direction: rtl;
         gap: 2px;
-        white-space: nowrap;
+        max-width: 100%;
+        white-space: normal;
       }
       .receipt-meta-val {
         font-weight: 700;
