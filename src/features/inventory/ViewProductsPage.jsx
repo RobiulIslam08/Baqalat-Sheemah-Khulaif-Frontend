@@ -2,10 +2,10 @@ import { useState, useCallback } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useProducts, useUpdateProduct } from "@/hooks/useProducts";
 import { useFormulations } from "@/hooks/useFormulations";
-import { Search, Pencil, Check, X, Loader2 } from "lucide-react";
+import { Search, Pencil, X, Loader2 } from "lucide-react";
 
 export default function ViewProductsPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [keyword, setKeyword] = useState("");
   const [searchBy, setSearchBy] = useState("Select");
   const PAGE_SIZE = 100;
@@ -35,13 +35,52 @@ export default function ViewProductsPage() {
 
   const startEdit = useCallback((product) => {
     setEditingId(product._id);
-    setEditForm({ productName: product.productName, formulation: product.formulation || "", arabicName: product.arabicName || "", vat: product.vat, mrp: product.mrp, purchasePrice: product.purchasePrice, sellingPrice: product.sellingPrice, quantity: product.quantity, minQty: product.minQty, storage: product.storage || "", batchCode: product.batchCode || "", expiryDate: product.expiryDate ? new Date(product.expiryDate).toISOString().split("T")[0] : "" });
+    setEditForm({
+      productId: product.productId || "",
+      productCode: product.productCode || "",
+      productName: product.productName || "",
+      arabicName: product.arabicName || "",
+      vat: String(product.vat ?? "15"),
+      mrp: product.mrp ?? "",
+      purchasePrice: product.purchasePrice ?? "",
+      sellingPrice: product.sellingPrice ?? "",
+      quantity: product.quantity ?? "",
+      packageVal: product.packageVal || "",
+      productType: product.productType || "SINGLE",
+      boxQty: product.boxQty ?? "1",
+      minQty: product.minQty ?? "1",
+      storage: product.storage || "",
+      formulation: product.formulation || "",
+      batchCode: product.batchCode || "",
+      expiryDate: product.expiryDate ? new Date(product.expiryDate).toISOString().split("T")[0] : "",
+    });
   }, []);
 
   const cancelEdit = () => { setEditingId(null); setEditForm({}); };
 
   const saveEdit = () => {
-    updateProduct.mutate({ id: editingId, data: { productName: editForm.productName, formulation: editForm.formulation || undefined, arabicName: editForm.arabicName || undefined, vat: Number(editForm.vat), mrp: Number(editForm.mrp), purchasePrice: Number(editForm.purchasePrice), sellingPrice: Number(editForm.sellingPrice), minQty: Number(editForm.minQty), storage: editForm.storage || undefined, batchCode: editForm.batchCode || undefined, expiryDate: editForm.expiryDate || undefined } }, { onSuccess: cancelEdit });
+    if (!String(editForm.productCode || "").trim() || !String(editForm.productName || "").trim()) return;
+    updateProduct.mutate({
+      id: editingId,
+      data: {
+        productCode: editForm.productCode.trim(),
+        productName: editForm.productName.trim(),
+        arabicName: editForm.arabicName.trim() || undefined,
+        vat: Number(editForm.vat) || 0,
+        mrp: Number(editForm.mrp) || 0,
+        purchasePrice: Number(editForm.purchasePrice) || 0,
+        sellingPrice: Number(editForm.sellingPrice) || 0,
+        quantity: Number(editForm.quantity) || 0,
+        packageVal: editForm.packageVal.trim() || undefined,
+        productType: editForm.productType || "SINGLE",
+        boxQty: Number(editForm.boxQty) || 1,
+        minQty: Number(editForm.minQty) || 0,
+        storage: editForm.storage || undefined,
+        formulation: editForm.formulation || undefined,
+        batchCode: editForm.batchCode.trim() || undefined,
+        expiryDate: editForm.expiryDate || undefined,
+      },
+    }, { onSuccess: cancelEdit });
   };
 
   const ef = (key, val) => setEditForm((f) => ({ ...f, [key]: val }));
@@ -88,28 +127,19 @@ export default function ViewProductsPage() {
           : products.map((p, idx) => (<tr key={p._id}>
             <td>{startRecord + idx}</td>
             <td>{p.productCode}</td>
-            <td>{editingId === p._id ? <input className="pos-input" value={editForm.productName} onChange={(e) => ef("productName", e.target.value)} /> : p.productName}</td>
-            <td>
-              {editingId === p._id ? (
-                <select className="pos-select" value={editForm.formulation} onChange={(e) => ef("formulation", e.target.value)}>
-                  <option value="">—</option>
-                  {formulations.map((f) => <option key={f._id} value={f.formulationName}>{f.formulationName}</option>)}
-                </select>
-              ) : (
-                p.formulation || "—"
-              )}
-            </td>
-            <td>{editingId === p._id ? <select className="pos-select" value={editForm.vat} onChange={(e) => ef("vat", e.target.value)}><option value="0">0%</option><option value="5">5%</option><option value="15">15%</option></select> : `${p.vat}%`}</td>
-            <td>{editingId === p._id ? <input className="pos-input" dir="rtl" value={editForm.arabicName} onChange={(e) => ef("arabicName", e.target.value)} /> : p.arabicName || "—"}</td>
-            <td>{editingId === p._id ? <input className="pos-input" value={editForm.storage} onChange={(e) => ef("storage", e.target.value)} /> : p.storage || "—"}</td>
-            <td>{editingId === p._id ? <input className="pos-input w-28" type="text" placeholder="Batch" value={editForm.batchCode} onChange={(e) => ef("batchCode", e.target.value)} /> : p.batchCode || "—"}</td>
-            <td>{editingId === p._id ? <input className="pos-input w-32" type="date" value={editForm.expiryDate} onChange={(e) => ef("expiryDate", e.target.value)} /> : (p.expiryDate ? new Date(p.expiryDate).toISOString().split("T")[0] : "—")}</td>
+            <td>{p.productName}</td>
+            <td>{p.formulation || "—"}</td>
+            <td>{`${p.vat}%`}</td>
+            <td>{p.arabicName || "—"}</td>
+            <td>{p.storage || "—"}</td>
+            <td>{p.batchCode || "—"}</td>
+            <td>{(p.expiryDate ? new Date(p.expiryDate).toISOString().split("T")[0] : "—")}</td>
             <td>{p.quantity}</td>
-            <td>{editingId === p._id ? <input className="pos-input w-20" type="number" value={editForm.minQty} onChange={(e) => ef("minQty", e.target.value)} /> : p.minQty}</td>
-            <td>{editingId === p._id ? <input className="pos-input w-24" type="number" value={editForm.mrp} onChange={(e) => ef("mrp", e.target.value)} /> : p.mrp}</td>
-            <td>{editingId === p._id ? <input className="pos-input w-24" type="number" value={editForm.purchasePrice} onChange={(e) => ef("purchasePrice", e.target.value)} /> : p.purchasePrice}</td>
-            <td>{editingId === p._id ? <input className="pos-input w-24" type="number" value={editForm.sellingPrice} onChange={(e) => ef("sellingPrice", e.target.value)} /> : p.sellingPrice}</td>
-            <td>{editingId === p._id ? (<div className="flex gap-1"><button onClick={saveEdit} className="text-green-500 hover:opacity-70" disabled={updateProduct.isPending}>{updateProduct.isPending ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}</button><button onClick={cancelEdit} className="text-destructive hover:opacity-70"><X size={14} /></button></div>) : (<button onClick={() => startEdit(p)} className="text-primary hover:opacity-70"><Pencil size={14} /></button>)}</td>
+            <td>{p.minQty}</td>
+            <td>{p.mrp}</td>
+            <td>{p.purchasePrice}</td>
+            <td>{p.sellingPrice}</td>
+            <td><button onClick={() => startEdit(p)} className="text-primary hover:opacity-70" title={t("viewProducts.edit")}><Pencil size={14} /></button></td>
           </tr>))}
         </tbody>
       </table>
@@ -134,5 +164,140 @@ export default function ViewProductsPage() {
         </div>
       </div>
     </div>
+
+    {editingId && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={cancelEdit}>
+        <div className="bg-card w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-lg shadow-xl flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="p-4 border-b flex justify-between items-center bg-primary text-primary-foreground">
+            <h3 className="font-bold">{t("viewProducts.edit")}</h3>
+            <button type="button" onClick={cancelEdit} className="hover:opacity-70"><X size={20} /></button>
+          </div>
+          <div className="p-4 overflow-y-auto flex-1 space-y-6">
+            <section>
+              <h3 className="pos-form-section-title">{t("addProduct.sectionIdentity")}</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="pos-label">{t("addProduct.productId")}</label>
+                  <input className="pos-input bg-muted/40 cursor-not-allowed" value={editForm.productId || ""} readOnly />
+                </div>
+                <div>
+                  <label className="pos-label">{t("addProduct.productCode")}</label>
+                  <input className="pos-input" value={editForm.productCode || ""} onChange={(e) => ef("productCode", e.target.value)} />
+                </div>
+              </div>
+            </section>
+            <section>
+              <h3 className="pos-form-section-title">{t("addProduct.sectionNames")}</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="pos-label">{t("addProduct.productName")}</label>
+                  <input className="pos-input" value={editForm.productName || ""} onChange={(e) => ef("productName", e.target.value)} />
+                </div>
+                <div>
+                  <label className="pos-label">{t("addProduct.arabicName")}</label>
+                  <input className="pos-input" dir="rtl" value={editForm.arabicName || ""} onChange={(e) => ef("arabicName", e.target.value)} />
+                </div>
+              </div>
+            </section>
+            <section>
+              <h3 className="pos-form-section-title">{t("addProduct.sectionPricing")}</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="pos-label">{t("addProduct.purchasePrice")}</label>
+                  <input type="number" className="pos-input" value={editForm.purchasePrice ?? ""} onChange={(e) => ef("purchasePrice", e.target.value)} />
+                </div>
+                <div>
+                  <label className="pos-label">{t("addProduct.sellingPrice")}</label>
+                  <input type="number" className="pos-input" value={editForm.sellingPrice ?? ""} onChange={(e) => ef("sellingPrice", e.target.value)} />
+                </div>
+                <div>
+                  <label className="pos-label">{t("addProduct.mrp")}</label>
+                  <input type="number" className="pos-input" value={editForm.mrp ?? ""} onChange={(e) => ef("mrp", e.target.value)} />
+                </div>
+                <div>
+                  <label className="pos-label">{t("addProduct.vat")}</label>
+                  <select className="pos-select" value={editForm.vat ?? "15"} onChange={(e) => ef("vat", e.target.value)}>
+                    <option value="0">0%</option>
+                    <option value="5">5%</option>
+                    <option value="15">15%</option>
+                  </select>
+                </div>
+              </div>
+            </section>
+            <section>
+              <h3 className="pos-form-section-title">{t("addProduct.sectionQuantity")}</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="pos-label">{t("addProduct.quantity")}</label>
+                  <input type="number" className="pos-input" value={editForm.quantity ?? ""} onChange={(e) => ef("quantity", e.target.value)} />
+                </div>
+                <div>
+                  <label className="pos-label">{t("addProduct.package")}</label>
+                  <input className="pos-input" value={editForm.packageVal || ""} onChange={(e) => ef("packageVal", e.target.value)} />
+                </div>
+                <div>
+                  <label className="pos-label">{t("addProduct.productType")}</label>
+                  <select className="pos-select" value={editForm.productType || "SINGLE"} onChange={(e) => ef("productType", e.target.value)}>
+                    <option value="SINGLE">{t("sales.single")}</option>
+                    <option value="BOX">BOX</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="pos-label">{t("addProduct.boxQty")}</label>
+                  <input type="number" className="pos-input" value={editForm.boxQty ?? ""} onChange={(e) => ef("boxQty", e.target.value)} />
+                </div>
+                <div>
+                  <label className="pos-label">{t("addProduct.minQty")}</label>
+                  <input type="number" className="pos-input" value={editForm.minQty ?? ""} onChange={(e) => ef("minQty", e.target.value)} />
+                </div>
+              </div>
+            </section>
+            <section>
+              <h3 className="pos-form-section-title">{t("addProduct.sectionBatch")}</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="pos-label">{t("sales.batchCode")}</label>
+                  <input className="pos-input" value={editForm.batchCode || ""} onChange={(e) => ef("batchCode", e.target.value)} />
+                </div>
+                <div>
+                  <label className="pos-label">{t("addProduct.expiryDate")}</label>
+                  <input type="date" className="pos-input" value={editForm.expiryDate || ""} onChange={(e) => ef("expiryDate", e.target.value)} />
+                </div>
+              </div>
+            </section>
+            <section>
+              <h3 className="pos-form-section-title">{t("addProduct.sectionClassification")}</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="pos-label">{t("addProduct.storage")}</label>
+                  <select className="pos-select" value={editForm.storage || ""} onChange={(e) => ef("storage", e.target.value)}>
+                    <option value="">—</option>
+                    {editForm.storage && editForm.storage !== "Main Warehouse" && editForm.storage !== "Secondary Warehouse" && (
+                      <option value={editForm.storage}>{editForm.storage}</option>
+                    )}
+                    <option value="Main Warehouse">Main Warehouse</option>
+                    <option value="Secondary Warehouse">Secondary Warehouse</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="pos-label">{t("addProduct.formulation")}</label>
+                  <select className="pos-select" value={editForm.formulation || ""} onChange={(e) => ef("formulation", e.target.value)}>
+                    <option value="">{t("addProduct.select")}</option>
+                    {formulations.map((f) => <option key={f._id} value={f.formulationName}>{f.formulationName}</option>)}
+                  </select>
+                </div>
+              </div>
+            </section>
+          </div>
+          <div className="p-4 border-t flex justify-end gap-2">
+            <button type="button" className="pos-btn-secondary" onClick={cancelEdit}>{lang === "ar" ? "إلغاء" : "Cancel"}</button>
+            <button type="button" className="pos-btn-primary gap-1" onClick={saveEdit} disabled={updateProduct.isPending}>
+              {updateProduct.isPending && <Loader2 size={14} className="animate-spin" />}
+              {t("common.save")}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
   </div>);
 }
