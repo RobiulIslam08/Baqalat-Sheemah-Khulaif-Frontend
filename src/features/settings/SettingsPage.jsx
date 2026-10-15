@@ -5,8 +5,8 @@ import { useSettings, useUpdateSettings, useResetDemo, useDeleteAllData } from "
 import { Save, ShieldCheck, Printer, Loader2, X, CheckCircle2, AlertCircle, Trash2 } from "lucide-react";
 import { apiGet } from "@/services/api";
 
-const LOGO_MAX_EDGE = 320;
-const LOGO_MAX_CHARS = 400_000;
+const LOGO_MAX_EDGE = 900;
+const LOGO_MAX_CHARS = 1_200_000;
 
 function resizeLogo(file) {
   return new Promise((resolve, reject) => {
@@ -17,16 +17,25 @@ function resizeLogo(file) {
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
-      const scale = Math.min(1, LOGO_MAX_EDGE / img.width, LOGO_MAX_EDGE / img.height);
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.max(1, Math.round(img.width * scale));
-      canvas.height = Math.max(1, Math.round(img.height * scale));
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(url);
       const mime = file.type === "image/png" ? "image/png" : "image/jpeg";
-      let dataUrl = canvas.toDataURL(mime, 0.85);
-      if (dataUrl.length > LOGO_MAX_CHARS) dataUrl = canvas.toDataURL("image/jpeg", 0.6);
+      const encode = (edge) => {
+        const scale = Math.min(1, edge / img.width, edge / img.height);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const ctx = canvas.getContext("2d");
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        return mime === "image/png" ? canvas.toDataURL("image/png") : canvas.toDataURL("image/jpeg", 0.92);
+      };
+      let edge = LOGO_MAX_EDGE;
+      let dataUrl = encode(edge);
+      while (dataUrl.length > LOGO_MAX_CHARS && edge > 360) {
+        edge = Math.round(edge * 0.85);
+        dataUrl = encode(edge);
+      }
       if (dataUrl.length > LOGO_MAX_CHARS) {
         reject(new Error("size"));
         return;

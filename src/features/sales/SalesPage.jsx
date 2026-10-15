@@ -535,9 +535,9 @@ export default function SalesPage() {
             {settings?.storeName || (invoiceMode === "en" ? "Baqalat Sheemah Khulaif Aayed Al-Enazi Lil-Mawad Al-Ghidha'iyyah" : "بقالة شيمه خليف عايد العنزي للمواد الغذائية")}
           </h2>
           <p className="receipt-subtext">{settings?.storeAddress || "خميس مشيط - مخطط الحسام - الصناعية القديم"}</p>
-          <p className="receipt-subtext">{receiptText(invoiceMode, "السجل التجاري", "CR")} : {settings?.crNumber || "7006133065"}</p>
-          <p className="receipt-subtext">{receiptText(invoiceMode, "الرقم الضريبي", "VAT No")} : {settings?.vatNumber || "311465715100003"}</p>
-          <p className="receipt-subtext">{receiptText(invoiceMode, "جوال", "Mobile")} : {settings?.supportContact || "0555917189"}</p>
+          <p className="receipt-subtext">{receiptText(invoiceMode, `السجل التجاري : ${settings?.crNumber || "7006133065"}`, `CR : ${settings?.crNumber || "7006133065"}`)}</p>
+          <p className="receipt-subtext">{receiptText(invoiceMode, `الرقم الضريبي : ${settings?.vatNumber || "311465715100003"}`, `VAT No : ${settings?.vatNumber || "311465715100003"}`)}</p>
+          <p className="receipt-subtext">{receiptText(invoiceMode, `جوال : ${settings?.supportContact || "0555917189"}`, `Mobile : ${settings?.supportContact || "0555917189"}`)}</p>
         </div>
         
         <div className="receipt-divider-arrow">------------------------------------------</div>
@@ -545,23 +545,23 @@ export default function SalesPage() {
         <div className="receipt-invoice-box">
           <div className="receipt-invoice-title">{receiptText(invoiceMode, "فاتورة ضريبية مبسطة", "Simplified Tax Invoice")}</div>
           <div className="receipt-invoice-row">
-            <span>{receiptText(invoiceMode, "رقم الفاتورة", "Invoice No")} :</span>
+            <span>{receiptText(invoiceMode, "رقم الفاتورة :", "Invoice No :")}</span>
             <span className="font-bold">{printData.billNo}</span>
           </div>
           <div className="receipt-invoice-row">
-            <span>{receiptText(invoiceMode, "التاريخ", "Date")} :</span>
+            <span>{receiptText(invoiceMode, "التاريخ :", "Date :")}</span>
             <span>{new Date(printData.createdAt).toLocaleDateString("en-GB").replace(/\//g, "/")}</span>
           </div>
           <div className="receipt-invoice-row">
-            <span>{receiptText(invoiceMode, "الوقت", "Time")} :</span>
+            <span>{receiptText(invoiceMode, "الوقت :", "Time :")}</span>
             <span>{new Date(printData.createdAt).toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
           </div>
           <div className="receipt-invoice-row">
-            <span>{receiptText(invoiceMode, "نوع الفاتورة", "Type")} :</span>
+            <span>{receiptText(invoiceMode, "نوع الفاتورة :", "Type :")}</span>
             <span>{receiptSaleType(invoiceMode, "SALE")}</span>
           </div>
           <div className="receipt-invoice-row">
-            <span>{receiptText(invoiceMode, "طريقة الدفع", "Payment")} :</span>
+            <span>{receiptText(invoiceMode, "طريقة الدفع :", "Payment :")}</span>
             <span>{receiptPayment(invoiceMode, printData.paymentMode)}</span>
           </div>
         </div>
@@ -570,7 +570,7 @@ export default function SalesPage() {
           <>
             <div className="receipt-divider">------------------------------------------</div>
             <div className="receipt-invoice-row">
-              <span>{receiptText(invoiceMode, "اسم العميل", "Customer")} :</span>
+              <span>{receiptText(invoiceMode, "اسم العميل :", "Customer :")}</span>
               <span className="font-semibold">{printData.customerName}</span>
             </div>
           </>
@@ -594,7 +594,7 @@ export default function SalesPage() {
                 <tr key={idx}>
                   <td className={nameAlign}>
                     {names.primary}
-                    {names.secondary && <div dir="ltr">{names.secondary}</div>}
+                    {names.secondary && <div className="receipt-item-en" dir="ltr">{names.secondary}</div>}
                   </td>
                   <td className="text-center">{Number(item.quantity).toFixed(1)}</td>
                   <td className="text-center">{(Number(item.total) / (Number(item.quantity) || 1)).toFixed(2)}</td>
@@ -666,8 +666,11 @@ export default function SalesPage() {
           visibility: visible !important;
           opacity: 1 !important;
           color: #000 !important;
-          -webkit-font-smoothing: antialiased !important;
-          text-rendering: optimizeLegibility !important;
+          font-family: "Noto Sans Arabic", "Segoe UI", Tahoma, sans-serif !important;
+          letter-spacing: 0 !important;
+          font-synthesis: none !important;
+          -webkit-font-smoothing: auto !important;
+          text-rendering: geometricPrecision !important;
         }
         #print-receipt {
           position: absolute;
@@ -678,11 +681,10 @@ export default function SalesPage() {
           margin: 0;
           background: #fff !important;
           color: #000 !important;
-          font-family: 'IBM Plex Sans Arabic', 'Inter', sans-serif !important;
-          font-weight: 500 !important;
+          font-weight: 700 !important;
           box-sizing: border-box;
           font-size: 15px !important;
-          line-height: 1.5 !important;
+          line-height: 1.3 !important;
         }
         @page {
           size: 80mm auto;
@@ -712,17 +714,22 @@ export default function SalesPage() {
         height: auto;
         max-height: 32mm;
         object-fit: contain;
+        image-rendering: high-quality;
       }
       .receipt-store-name {
         font-size: 20px;
-        font-weight: 900;
+        font-weight: 700;
         margin: 0 0 3px 0;
-        letter-spacing: 0.3px;
+        letter-spacing: 0;
+        line-height: 1.55;
+        white-space: pre-line;
       }
       .receipt-subtext {
-        font-size: 13px;
+        font-size: 15px;
         margin: 0 0 2px 0;
-        font-weight: 500;
+        font-weight: 700;
+        line-height: 1.55;
+        white-space: pre-line;
       }
       .receipt-divider-arrow {
         text-align: center;
@@ -742,20 +749,32 @@ export default function SalesPage() {
         margin: 5px 0;
       }
       .receipt-invoice-title {
-        font-weight: bold;
+        font-weight: 700;
         font-size: 16px;
         text-align: center;
         margin-bottom: 4px;
         border-bottom: 1px dashed #000;
         padding-bottom: 3px;
+        line-height: 1.5;
+        white-space: pre-line;
       }
       .receipt-invoice-row {
         display: flex;
         justify-content: space-between;
-        font-size: 14px;
-        font-weight: 500;
+        align-items: flex-start;
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 1.5;
         margin-bottom: 2px;
         padding: 1px 0;
+      }
+      .receipt-invoice-row span,
+      .receipt-summary-row span,
+      .receipt-payment-row span,
+      .receipt-items-table th,
+      .receipt-qr-text {
+        white-space: pre-line;
+        letter-spacing: 0;
       }
       .receipt-items-table {
         width: 100%;
@@ -782,18 +801,30 @@ export default function SalesPage() {
       .receipt-summary-row {
         display: flex;
         justify-content: space-between;
-        font-size: 14px;
-        font-weight: 500;
+        align-items: flex-start;
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 1.5;
         margin-bottom: 2px;
         padding: 1px 0;
       }
       .receipt-payment-row {
         display: flex;
         justify-content: space-between;
-        font-size: 15px;
-        font-weight: 600;
+        align-items: flex-start;
+        font-size: 16px;
+        font-weight: 700;
+        line-height: 1.5;
         margin-bottom: 2px;
         padding: 2px 4px;
+      }
+      .receipt-item-en {
+        display: block;
+        margin-top: 1px;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0;
+        line-height: 1.4;
       }
       .receipt-qr-section {
         display: flex;
@@ -807,9 +838,10 @@ export default function SalesPage() {
         height: 130px;
       }
       .receipt-qr-text {
-        font-size: 12px;
+        font-size: 14px;
         margin-top: 3px;
-        font-weight: bold;
+        font-weight: 700;
+        line-height: 1.45;
       }
     `}</style>
   </div>);

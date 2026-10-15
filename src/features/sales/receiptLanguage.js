@@ -8,16 +8,20 @@ export function receiptDir(mode) {
   return mode === "en" ? "ltr" : "rtl";
 }
 
+function bilingual(arabic, english) {
+  return `${arabic}\n\u2066${english}\u2069`;
+}
+
 export function receiptText(mode, arabic, english) {
   if (mode === "en") return english;
   if (mode === "ar") return arabic;
-  return `${arabic} / ${english}`;
+  return bilingual(arabic, english);
 }
 
 export function receiptQrLabel(mode) {
   if (mode === "en") return "QR CODE";
   if (mode === "ar") return "رمز الاستجابة السريعة";
-  return "رمز الاستجابة السريعة QR CODE";
+  return bilingual("رمز الاستجابة السريعة", "QR CODE");
 }
 
 export function receiptPayment(mode, paymentMode) {
@@ -32,7 +36,7 @@ export function receiptSaleType(mode, type) {
 
 export function receiptVatLabel(mode, percent) {
   const rate = Number(percent || 15);
-  if (mode === "both") return `الضريبة / VAT ${rate}٪`;
+  if (mode === "both") return bilingual(`الضريبة ${rate}٪`, `VAT ${rate}%`);
   if (mode === "en") return `VAT ${rate}%`;
   return `الضريبة ${rate}٪`;
 }

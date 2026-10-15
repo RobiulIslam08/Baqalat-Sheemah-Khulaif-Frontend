@@ -4,6 +4,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { usePurchases } from "@/hooks/usePurchases";
 import { Search, Loader2 } from "lucide-react";
+import { printReceipt } from "@/lib/printReceipt";
 
 export default function ViewPurchaseInvoicePage() {
   const { t } = useLanguage();
@@ -84,7 +85,7 @@ export default function ViewPurchaseInvoicePage() {
             </div>
           </div>
           <div className="p-4 border-t flex justify-end gap-2">
-            <button onClick={() => window.print()} className="pos-btn-secondary">{t("common.print")}</button>
+            <button onClick={() => printReceipt()} className="pos-btn-secondary">{t("common.print")}</button>
             <button onClick={() => setSelectedPurchase(null)} className="pos-btn-primary">{t("common.reset")}</button>
           </div>
         </div>
@@ -103,27 +104,27 @@ export default function ViewPurchaseInvoicePage() {
         <div className="receipt-divider-arrow">------------------------------------------</div>
 
         <div className="receipt-invoice-box">
-          <div className="receipt-invoice-title">Purchase Invoice / فاتورة مشتريات</div>
+          <div className="receipt-invoice-title">{"فاتورة مشتريات\n\u2066Purchase Invoice\u2069"}</div>
           <div className="receipt-invoice-row">
-            <span>Invoice No / رقم الفاتورة :</span>
+            <span>{"رقم الفاتورة :\n\u2066Invoice No :\u2069"}</span>
             <span style={{fontWeight:'bold'}}>{selectedPurchase.invoiceNo}</span>
           </div>
           <div className="receipt-invoice-row">
-            <span>Date / التاريخ :</span>
+            <span>{"التاريخ :\n\u2066Date :\u2069"}</span>
             <span>{new Date(selectedPurchase.invoiceDate).toLocaleDateString("en-GB")}</span>
           </div>
           <div className="receipt-invoice-row">
-            <span>Supplier / المورد :</span>
+            <span>{"المورد :\n\u2066Supplier :\u2069"}</span>
             <span style={{fontWeight:'bold'}}>{selectedPurchase.supplier?.supplierName || "—"}</span>
           </div>
           {selectedPurchase.purchaseOrderNo && (
             <div className="receipt-invoice-row">
-              <span>PO No / رقم الطلب :</span>
+              <span>{"رقم الطلب :\n\u2066PO No :\u2069"}</span>
               <span>{selectedPurchase.purchaseOrderNo}</span>
             </div>
           )}
           <div className="receipt-invoice-row">
-            <span>Payment / الدفع :</span>
+            <span>{"الدفع :\n\u2066Payment :\u2069"}</span>
             <span style={{textTransform:'uppercase'}}>{selectedPurchase.paymentMethod}</span>
           </div>
         </div>
@@ -134,7 +135,7 @@ export default function ViewPurchaseInvoicePage() {
           <thead>
             <tr>
               <th style={{textAlign:'left'}}>#</th>
-              <th style={{textAlign:'left'}}>Item / الصنف</th>
+              <th style={{textAlign:'right'}}>{"الصنف\n\u2066Item\u2069"}</th>
               <th style={{textAlign:'center'}}>Qty</th>
               <th style={{textAlign:'right'}}>Price</th>
               <th style={{textAlign:'right'}}>Amount</th>
@@ -157,28 +158,28 @@ export default function ViewPurchaseInvoicePage() {
 
         <div className="receipt-summary-box">
           <div className="receipt-summary-row">
-            <span>Net Amount / المبلغ الصافي</span>
+            <span>{"المبلغ الصافي\n\u2066Net Amount\u2069"}</span>
             <span>{Number(selectedPurchase.netAmount).toFixed(2)}</span>
           </div>
           <div className="receipt-summary-row">
-            <span>Discount / الخصم</span>
+            <span>{"الخصم\n\u2066Discount\u2069"}</span>
             <span>{Number(selectedPurchase.discount || 0).toFixed(2)}</span>
           </div>
-          <div className="receipt-summary-row" style={{fontWeight:'900', fontSize:'16px', borderTop:'1.5px solid #000', paddingTop:'4px', marginTop:'3px'}}>
-            <span>TOTAL / الإجمالي</span>
+          <div className="receipt-summary-row" style={{fontWeight:700, fontSize:'16px', borderTop:'1.5px solid #000', paddingTop:'4px', marginTop:'3px'}}>
+            <span>{"الإجمالي\n\u2066TOTAL\u2069"}</span>
             <span>{Number(selectedPurchase.totalAmount).toFixed(2)}</span>
           </div>
-          <div className="receipt-summary-row" style={{fontSize:'12px', fontWeight:500, marginTop:'3px'}}>
-            <span>Total Items / عدد الأصناف</span>
+          <div className="receipt-summary-row" style={{fontSize:'15px', fontWeight:700, marginTop:'3px'}}>
+            <span>{"عدد الأصناف\n\u2066Total Items\u2069"}</span>
             <span>{selectedPurchase.items?.length || 0}</span>
           </div>
         </div>
 
         <div className="receipt-divider">------------------------------------------</div>
 
-        <div style={{textAlign:'center', marginTop:'8px', fontSize:'13px'}}>
-          <div>Received By / استلم من قبل : _______________</div>
-          <div style={{marginTop:'16px', fontWeight:'bold', fontSize:'14px'}}>** Thank you / شكراً **</div>
+        <div style={{textAlign:'center', marginTop:'8px', fontSize:'15px', fontWeight:700, whiteSpace:'pre-line', letterSpacing:0, lineHeight:1.55}}>
+          <div>{"استلم من قبل : _______________\n\u2066Received By\u2069"}</div>
+          <div style={{marginTop:'16px', fontWeight:700, fontSize:'15px'}}>{"شكراً\n\u2066Thank you\u2069"}</div>
         </div>
       </div>
     )}
@@ -205,7 +206,11 @@ export default function ViewPurchaseInvoicePage() {
           visibility: visible !important;
           opacity: 1 !important;
           color: #000 !important;
-          -webkit-font-smoothing: antialiased !important;
+          font-family: "Noto Sans Arabic", "Segoe UI", Tahoma, sans-serif !important;
+          letter-spacing: 0 !important;
+          font-synthesis: none !important;
+          -webkit-font-smoothing: auto !important;
+          text-rendering: geometricPrecision !important;
         }
         #purchase-print-receipt {
           display: block !important;
@@ -217,10 +222,9 @@ export default function ViewPurchaseInvoicePage() {
           margin: 0;
           background: #fff !important;
           color: #000 !important;
-          font-family: 'IBM Plex Sans Arabic', 'Inter', Arial, sans-serif !important;
-          font-weight: 500 !important;
+          font-weight: 700 !important;
           font-size: 15px !important;
-          line-height: 1.6 !important;
+          line-height: 1.3 !important;
           box-sizing: border-box;
         }
         @page {
