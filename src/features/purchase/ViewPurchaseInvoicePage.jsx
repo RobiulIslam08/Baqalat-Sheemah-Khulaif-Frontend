@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSettings } from "@/hooks/useSettings";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { usePurchases } from "@/hooks/usePurchases";
 import { Search, Loader2 } from "lucide-react";
 
 export default function ViewPurchaseInvoicePage() {
   const { t } = useLanguage();
+  const { data: settings } = useSettings();
   const [searchType, setSearchType] = useState("date");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -93,6 +95,7 @@ export default function ViewPurchaseInvoicePage() {
     {selectedPurchase && (
       <div id="purchase-print-receipt">
         <div className="receipt-header">
+          {settings?.logo && <img src={settings.logo} alt="" className="receipt-logo" />}
           <h2 className="receipt-store-name">PURCHASE INVOICE</h2>
           <p className="receipt-subtext">فاتورة مشتريات</p>
         </div>

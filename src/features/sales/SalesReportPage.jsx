@@ -707,6 +707,7 @@ export default function SalesReportPage() {
       {saleDetail && (
         <div id="print-receipt" dir={receiptDir(invoiceMode)}>
           <div className="receipt-header">
+            {settings?.logo && <img src={settings.logo} alt="" className="receipt-logo" />}
             <h2 className="receipt-store-name">
               {settings?.storeName || (invoiceMode === "en" ? "Baqalat Sheemah Khulaif Aayed Al-Enazi Lil-Mawad Al-Ghidha'iyyah" : "بقالة شيمه خليف عايد العنزي للمواد الغذائية")}
             </h2>
@@ -880,6 +881,15 @@ export default function SalesReportPage() {
           text-align: center;
           margin-bottom: 2px;
         }
+        .receipt-logo {
+          display: block;
+          margin: 0 auto 4px;
+          width: 56mm;
+          max-width: 100%;
+          height: auto;
+          max-height: 32mm;
+          object-fit: contain;
+        }
         .receipt-store-name {
           font-size: 20px;
           font-weight: 900;
@@ -904,10 +914,9 @@ export default function SalesReportPage() {
           font-size: 12px;
         }
         .receipt-invoice-box {
-          border: 1.5px solid #000;
+          border: none;
           padding: 6px;
           margin: 5px 0;
-          border-radius: 4px;
         }
         .receipt-invoice-title {
           font-weight: bold;
@@ -943,10 +952,9 @@ export default function SalesReportPage() {
           border-bottom: 1px dotted #999;
         }
         .receipt-summary-box {
-          border: 1.5px solid #000;
+          border: none;
           padding: 6px;
           margin: 5px 0;
-          border-radius: 4px;
         }
         .receipt-summary-row {
           display: flex;

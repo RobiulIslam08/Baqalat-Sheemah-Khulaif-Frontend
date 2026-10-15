@@ -1,12 +1,21 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ShieldAlert, Wrench, Phone, LogIn, RefreshCw, AlertCircle } from "lucide-react";
+import { apiGet } from "@/services/api";
 
 export default function MaintenanceScreen({ license, onRefresh }) {
   const { lang } = useLanguage();
   const navigate = useNavigate();
 
   const isAr = lang === "ar";
+  const [logo, setLogo] = useState("");
+
+  useEffect(() => {
+    apiGet("/settings/branding", {}, { skipAuth: true })
+      .then((res) => setLogo(res?.data?.logo || ""))
+      .catch(() => setLogo(""));
+  }, []);
 
   const storeName = isAr
     ? "بقالة شيمه خليف عايد العنزي للمواد الغذائية"
@@ -40,6 +49,7 @@ export default function MaintenanceScreen({ license, onRefresh }) {
           <span className="inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-full mb-3">
             {isAr ? "وضع الصيانة الشاملة نشط" : "Full Maintenance Mode Active"}
           </span>
+          {logo && <img src={logo} alt="" className="mx-auto mb-3 h-24 w-auto max-w-[12rem] object-contain" />}
           <h2 className="text-xl sm:text-2xl font-bold text-slate-200 tracking-tight">
             {storeName}
           </h2>

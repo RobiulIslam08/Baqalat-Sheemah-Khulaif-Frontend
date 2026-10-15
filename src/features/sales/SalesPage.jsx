@@ -11,6 +11,18 @@ import { showError } from "@/lib/toast-helpers";
 import { printReceipt } from "@/lib/printReceipt";
 import { invoiceLanguageOf, receiptDir, receiptItemName, receiptPayment, receiptQrLabel, receiptSaleType, receiptText, receiptVatLabel } from "./receiptLanguage";
 
+const SCAN_IDLE_MS = 80;
+
+function findProductByCode(products, value) {
+  const query = String(value ?? "").trim();
+  if (!query) return null;
+  return (
+    products.find(
+      (p) => p.productCode === query || p.productId === query || p.barcodeValue === query
+    ) || null
+  );
+}
+
 function lineFigures(qty, dbPrice, boxQty, type, vatPercent) {
   const quantity = parseFloat(qty) || 0;
   const pieces = quantity * (type === "BOX" ? (parseFloat(boxQty) || 1) : 1);
@@ -36,7 +48,7 @@ export default function SalesPage() {
   const customers = custData?.customers || [];
   const allProducts = prodData?.products || [];
 
-  const emptyRow = (id) => ({ id, code: "", productName: "", batchCode: "", expiryDate: "", type: "SINGLE", quantity: "", dbPrice: "", price: "", vat: "", total: "" });
+  const emptyRow = (id) => ({ id, code: "", productName: "", type: "SINGLE", quantity: "", dbPrice: "", price: "", vat: "", total: "" });
   const [rows, setRows] = useState([emptyRow(1)]);
   const [customer, setCustomer] = useState("");
   const [amountPaid, setAmountPaid] = useState("");
@@ -52,6 +64,15 @@ export default function SalesPage() {
   const [qrBase64, setQrBase64] = useState("");
   const [focusRowId, setFocusRowId] = useState(null);
   const codeInputRefs = useRef({});
+  const codeResolveTimers = useRef({});
+  const productsRef = useRef(allProducts);
+  const langRef = useRef(lang);
+  const vatPercentRef = useRef(vatPercent);
+  const rowsRef = useRef(rows);
+  productsRef.current = allProducts;
+  langRef.current = lang;
+  vatPercentRef.current = vatPercent;
+  rowsRef.current = rows;
 
   // Cursor starts in the first product code field when the sell page opens
   useEffect(() => {
@@ -85,7 +106,7 @@ export default function SalesPage() {
     setRows((prev) =>
       prev.map((row) => {
         if (!row.code) return row;
-        const found = allProducts.find((p) => p.productCode === row.code || p.productId === row.code);
+        const found = findProductByCode(allProducts, row.code);
         if (found) {
           const translatedName = lang === "ar" ? (found.arabicName || found.productName) : found.productName;
           return { ...row, productName: translatedName };
@@ -101,93 +122,121 @@ export default function SalesPage() {
     }
   }, [lang, allProducts]);
 
-  const updateRow = (id, field, value) => {
-    let foundProduct = null;
-    if (field === "code") {
-      foundProduct = allProducts.find((p) => p.productCode === value || p.productId === value);
-      if (foundProduct) {
-        setSummaryProductName(lang === "ar" ? (foundProduct.arabicName || foundProduct.productName) : foundProduct.productName);
-        setSummaryPrice(String(foundProduct.sellingPrice));
-        setSummaryRemaining(String(foundProduct.quantity));
-      } else {
-        setSummaryProductName("");
-        setSummaryPrice("");
-        setSummaryRemaining("");
-      }
+  useEffect(() => () => {
+    Object.values(codeResolveTimers.current).forEach((timer) => clearTimeout(timer));
+  }, []);
+
+  // Match only after the scan or typing has finished, so a short product id
+  // cannot rewrite the field while the rest of the barcode is still arriving.
+  const resolveCode = (id, rawValue) => {
+    const value = String(rawValue ?? "");
+    const pending = rowsRef.current.find((r) => r.id === id);
+    // Ignore a timer for an older, shorter value. A newer value may start
+    // with the state if Enter arrives before the last keystroke is committed.
+    if (pending && pending.code !== value && !value.startsWith(pending.code)) return;
+
+    const currentLang = langRef.current;
+    const rate = vatPercentRef.current;
+    const foundProduct = findProductByCode(productsRef.current, value);
+
+    if (foundProduct) {
+      setSummaryProductName(currentLang === "ar" ? (foundProduct.arabicName || foundProduct.productName) : foundProduct.productName);
+      setSummaryPrice(String(foundProduct.sellingPrice));
+      setSummaryRemaining(String(foundProduct.quantity));
+    } else {
+      setSummaryProductName("");
+      setSummaryPrice("");
+      setSummaryRemaining("");
     }
 
     setRows((prev) => {
-      // Check if this product code already exists in another row
-      if (field === "code" && foundProduct) {
-        const existingRow = prev.find((r) => r.id !== id && (r.code === value || r.code === foundProduct.productCode));
-        if (existingRow) {
-          // Duplicate code found: increment quantity of existing row, remove current row
-          const updatedRows = prev
-            .filter((r) => r.id !== id) // Remove the current row
-            .map((r) => {
-              if (r.id !== existingRow.id) return r;
-              const newQty = (parseFloat(r.quantity) || 0) + 1;
-              const figures = lineFigures(newQty, r.dbPrice, r.boxQty, r.type, vatPercent);
-              return { ...r, quantity: String(newQty), ...figures };
-            });
+      const row = prev.find((r) => r.id === id);
+      if (!row || (row.code !== value && !value.startsWith(row.code))) return prev;
 
-          // Ensure there's always at least one empty row at the end for new entries
-          const lastRow = updatedRows[updatedRows.length - 1];
-          if (!lastRow || lastRow.code) {
-            const nextId = updatedRows.length > 0 ? Math.max(...updatedRows.map(r => r.id)) + 1 : 1;
-            updatedRows.push(emptyRow(nextId));
-            setTimeout(() => setFocusRowId(nextId), 0);
-          } else {
-            // Focus the existing empty last row
-            setTimeout(() => setFocusRowId(lastRow.id), 0);
-          }
+      if (!foundProduct) {
+        return prev.map((r) => (
+          r.id === id
+            ? { ...r, code: value, productName: "", dbPrice: "", price: "", vat: "", total: "" }
+            : r
+        ));
+      }
 
+      const existingRow = prev.find((r) => r.id !== id && r.code === foundProduct.productCode);
+      if (existingRow) {
+        const updatedRows = prev
+          .filter((r) => r.id !== id)
+          .map((r) => {
+            if (r.id !== existingRow.id) return r;
+            const newQty = (parseFloat(r.quantity) || 0) + 1;
+            const figures = lineFigures(newQty, r.dbPrice, r.boxQty, r.type, rate);
+            return { ...r, quantity: String(newQty), ...figures };
+          });
 
-          return updatedRows;
+        const lastRow = updatedRows[updatedRows.length - 1];
+        if (!lastRow || lastRow.code) {
+          const nextId = updatedRows.length > 0 ? Math.max(...updatedRows.map((r) => r.id)) + 1 : 1;
+          updatedRows.push(emptyRow(nextId));
+          setTimeout(() => setFocusRowId(nextId), 0);
+        } else {
+          setTimeout(() => setFocusRowId(lastRow.id), 0);
         }
+        return updatedRows;
       }
 
       const newRows = prev.map((r) => {
         if (r.id !== id) return r;
-        const updated = { ...r, [field]: value };
-
-        if (field === "code" && foundProduct) {
-          updated.code = foundProduct.productCode;
-          updated.productName = lang === "ar" ? (foundProduct.arabicName || foundProduct.productName) : foundProduct.productName;
-          updated.dbPrice = String(foundProduct.sellingPrice || "");
-          updated.boxQty = String(foundProduct.boxQty || 1);
-          updated.batchCode = foundProduct.batchCode || "";
-          updated.expiryDate = foundProduct.expiryDate ? new Date(foundProduct.expiryDate).toISOString().split("T")[0] : "";
-          
-          // Auto set quantity to 1 if it's empty
-          if (!updated.quantity) {
-            updated.quantity = "1";
-          }
-        } else if (field === "code" && !foundProduct) {
-          updated.productName = "";
-          updated.dbPrice = "";
-          updated.batchCode = "";
-          updated.expiryDate = "";
-        }
-
-        if (field === "quantity" || field === "code" || field === "type") {
-          Object.assign(updated, lineFigures(updated.quantity, updated.dbPrice, updated.boxQty, updated.type, vatPercent));
-        } else if (field === "total") {
-          updated.total = value;
-        }
-
-        return updated;
+        const quantity = r.quantity || "1";
+        const dbPrice = String(foundProduct.sellingPrice || "");
+        const boxQty = String(foundProduct.boxQty || 1);
+        const type = r.type || "SINGLE";
+        return {
+          ...r,
+          code: foundProduct.productCode,
+          productName: currentLang === "ar" ? (foundProduct.arabicName || foundProduct.productName) : foundProduct.productName,
+          dbPrice,
+          boxQty,
+          quantity,
+          type,
+          ...lineFigures(quantity, dbPrice, boxQty, type, rate),
+        };
       });
 
-      if (field === "code" && foundProduct && newRows[newRows.length - 1].id === id) {
-        const nextId = newRows.length > 0 ? Math.max(...newRows.map(r => r.id)) + 1 : 1;
+      if (newRows[newRows.length - 1].id === id) {
+        const nextId = newRows.length > 0 ? Math.max(...newRows.map((r) => r.id)) + 1 : 1;
         newRows.push(emptyRow(nextId));
-        // Schedule focus on the new row's code input
         setTimeout(() => setFocusRowId(nextId), 0);
       }
 
       return newRows;
     });
+  };
+
+  const handleCodeChange = (id, value) => {
+    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, code: value } : r)));
+    clearTimeout(codeResolveTimers.current[id]);
+    codeResolveTimers.current[id] = setTimeout(() => resolveCode(id, value), SCAN_IDLE_MS);
+  };
+
+  const handleCodeKeyDown = (id, event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    clearTimeout(codeResolveTimers.current[id]);
+    resolveCode(id, event.currentTarget.value);
+  };
+
+  const updateRow = (id, field, value) => {
+    setRows((prev) => prev.map((r) => {
+      if (r.id !== id) return r;
+      const updated = { ...r, [field]: value };
+
+      if (field === "quantity" || field === "type") {
+        Object.assign(updated, lineFigures(updated.quantity, updated.dbPrice, updated.boxQty, updated.type, vatPercent));
+      } else if (field === "total") {
+        updated.total = value;
+      }
+
+      return updated;
+    }));
   };
 
   const addRow = () => setRows((prev) => [...prev, emptyRow(prev.length > 0 ? Math.max(...prev.map(r => r.id)) + 1 : 1)]);
@@ -256,8 +305,6 @@ export default function SalesPage() {
       items: validItems.map((r) => ({
         code: r.code,
         productName: r.productName,
-        batchCode: r.batchCode || undefined,
-        expiryDate: r.expiryDate || undefined,
         type: r.type,
         quantity: Number(r.quantity),
         price: Number(r.price),
@@ -367,15 +414,13 @@ export default function SalesPage() {
     <div className="pos-card overflow-x-auto">
       <table className="pos-table min-w-[900px]">
         <thead><tr>
-          <th className="w-14">{t("sales.slNo")}</th><th className="w-36">{t("sales.code")}</th><th>{t("sales.productName")}</th><th>{t("sales.batchCode")}</th><th>{t("sales.expiryDate")}</th><th className="w-24">{t("sales.type")}</th><th className="w-20">{t("sales.quantity")}</th><th className="w-24">{t("sales.price")}</th><th className="w-20">{t("sales.vat")}</th><th className="w-24">{t("sales.total")}</th><th className="w-10"></th>
+          <th className="w-14">{t("sales.slNo")}</th><th className="w-48">{t("sales.code")}</th><th>{t("sales.productName")}</th><th className="w-24">{t("sales.type")}</th><th className="w-20">{t("sales.quantity")}</th><th className="w-24">{t("sales.price")}</th><th className="w-20">{t("sales.vat")}</th><th className="w-24">{t("sales.total")}</th><th className="w-10"></th>
         </tr></thead>
         <tbody>
           {rows.map((row) => (<tr key={row.id}>
             <td>{row.id}</td>
-            <td><input type="text" className="pos-input" value={row.code} onChange={(e) => updateRow(row.id, "code", e.target.value)} ref={(el) => { codeInputRefs.current[row.id] = el; }} /></td>
+            <td><input type="text" className="pos-input" value={row.code} autoComplete="off" onChange={(e) => handleCodeChange(row.id, e.target.value)} onKeyDown={(e) => handleCodeKeyDown(row.id, e)} ref={(el) => { codeInputRefs.current[row.id] = el; }} /></td>
             <td><input type="text" className="pos-input" value={row.productName} onChange={(e) => updateRow(row.id, "productName", e.target.value)} /></td>
-            <td><input type="text" className="pos-input" value={row.batchCode} onChange={(e) => updateRow(row.id, "batchCode", e.target.value)} /></td>
-            <td><input type="date" className="pos-input" value={row.expiryDate} onChange={(e) => updateRow(row.id, "expiryDate", e.target.value)} /></td>
             <td><select className="pos-select" value={row.type} onChange={(e) => updateRow(row.id, "type", e.target.value)}><option value="SINGLE">{t("sales.single")}</option><option value="BOX">BOX</option></select></td>
             <td><input type="number" className="pos-input" value={row.quantity} onChange={(e) => updateRow(row.id, "quantity", e.target.value)} /></td>
             <td><input type="number" className="pos-input" value={row.price} readOnly /></td>
@@ -474,6 +519,7 @@ export default function SalesPage() {
     {printData && (
       <div id="print-receipt" dir={receiptDir(invoiceMode)}>
         <div className="receipt-header">
+          {settings?.logo && <img src={settings.logo} alt="" className="receipt-logo" />}
           <h2 className="receipt-store-name">
             {settings?.storeName || (invoiceMode === "en" ? "Baqalat Sheemah Khulaif Aayed Al-Enazi Lil-Mawad Al-Ghidha'iyyah" : "بقالة شيمه خليف عايد العنزي للمواد الغذائية")}
           </h2>
@@ -647,6 +693,15 @@ export default function SalesPage() {
         text-align: center;
         margin-bottom: 2px;
       }
+      .receipt-logo {
+        display: block;
+        margin: 0 auto 4px;
+        width: 56mm;
+        max-width: 100%;
+        height: auto;
+        max-height: 32mm;
+        object-fit: contain;
+      }
       .receipt-store-name {
         font-size: 20px;
         font-weight: 900;
@@ -671,10 +726,9 @@ export default function SalesPage() {
         font-size: 12px;
       }
       .receipt-invoice-box {
-        border: 1.5px solid #000;
+        border: none;
         padding: 6px;
         margin: 5px 0;
-        border-radius: 4px;
       }
       .receipt-invoice-title {
         font-weight: bold;
@@ -710,10 +764,9 @@ export default function SalesPage() {
         border-bottom: 1px dotted #999;
       }
       .receipt-summary-box {
-        border: 1.5px solid #000;
+        border: none;
         padding: 6px;
         margin: 5px 0;
-        border-radius: 4px;
       }
       .receipt-summary-row {
         display: flex;

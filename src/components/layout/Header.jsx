@@ -58,8 +58,9 @@ export default function Header() {
             </button>
           </div>
 
-          <h1 className="hidden md:block text-xl md:text-2xl font-bold text-primary text-center flex-1">
-            {storeName}
+          <h1 className="hidden md:flex items-center justify-center gap-2 text-xl md:text-2xl font-bold text-primary text-center flex-1">
+            {settings?.logo && <img src={settings.logo} alt="" className="h-14 w-auto max-w-[9rem] object-contain" />}
+            <span>{storeName}</span>
           </h1>
 
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -84,8 +85,9 @@ export default function Header() {
           </div>
         </div>
 
-        <h1 className="md:hidden text-lg font-bold text-primary text-center mt-2">
-          {storeName} 
+        <h1 className="md:hidden flex items-center justify-center gap-2 text-lg font-bold text-primary text-center mt-2">
+          {settings?.logo && <img src={settings.logo} alt="" className="h-12 w-auto max-w-[7.5rem] object-contain" />}
+          <span>{storeName}</span>
         </h1>
       </div>
     </header>

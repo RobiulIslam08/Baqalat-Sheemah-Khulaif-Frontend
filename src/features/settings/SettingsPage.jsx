@@ -5,6 +5,42 @@ import { useSettings, useUpdateSettings, useResetDemo, useDeleteAllData } from "
 import { Save, ShieldCheck, Printer, Loader2, X, CheckCircle2, AlertCircle, Trash2 } from "lucide-react";
 import { apiGet } from "@/services/api";
 
+const LOGO_MAX_EDGE = 320;
+const LOGO_MAX_CHARS = 400_000;
+
+function resizeLogo(file) {
+  return new Promise((resolve, reject) => {
+    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) {
+      reject(new Error("type"));
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, LOGO_MAX_EDGE / img.width, LOGO_MAX_EDGE / img.height);
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(img.width * scale));
+      canvas.height = Math.max(1, Math.round(img.height * scale));
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      const mime = file.type === "image/png" ? "image/png" : "image/jpeg";
+      let dataUrl = canvas.toDataURL(mime, 0.85);
+      if (dataUrl.length > LOGO_MAX_CHARS) dataUrl = canvas.toDataURL("image/jpeg", 0.6);
+      if (dataUrl.length > LOGO_MAX_CHARS) {
+        reject(new Error("size"));
+        return;
+      }
+      resolve(dataUrl);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("load"));
+    };
+    img.src = url;
+  });
+}
+
 export default function SettingsPage() {
   const { t, lang } = useLanguage();
   const { user } = useAuthContext();
@@ -29,8 +65,10 @@ export default function SettingsPage() {
     storeAddress: "",
     crNumber: "",
     invoiceLanguage: "both",
+    logo: "",
   });
   const [errors, setErrors] = useState({});
+  const [logoError, setLogoError] = useState("");
   const [isDiagnosing, setIsDiagnosing] = useState(false);
   const [diagResult, setDiagResult] = useState(null);
   const [resetOpen, setResetOpen] = useState(false);
@@ -41,6 +79,21 @@ export default function SettingsPage() {
   }, [settings]);
 
   const update = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+
+  const handleLogoFile = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !canSave) return;
+    setLogoError("");
+    try {
+      const dataUrl = await resizeLogo(file);
+      update("logo", dataUrl);
+    } catch (err) {
+      const typeError = lang === "ar" ? "يُقبل PNG أو JPEG أو WebP فقط" : "Only PNG, JPEG, or WebP images are accepted";
+      const sizeError = lang === "ar" ? "الشعار كبير جداً. اختر صورة أصغر" : "Logo is too large. Choose a smaller image";
+      setLogoError(err?.message === "size" ? sizeError : typeError);
+    }
+  };
 
   const validate = () => {
     const next = {};
@@ -118,6 +171,29 @@ export default function SettingsPage() {
               onChange={(e) => update("storeName", e.target.value)}
             />
             {errors.storeName && <p className="text-xs text-destructive mt-1">{errors.storeName}</p>}
+          </div>
+          <div className="md:col-span-2">
+            <label className="pos-label">{lang === "ar" ? "شعار المتجر" : "Store Logo"}</label>
+            <div className="flex flex-wrap items-center gap-3">
+              {form.logo ? (
+                <img src={form.logo} alt="" className="h-24 w-auto max-w-[12rem] object-contain rounded-md border border-border bg-white" />
+              ) : (
+                <div className="h-16 w-16 rounded-md border border-dashed border-border bg-accent/20" />
+              )}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="text-sm"
+                disabled={!canSave}
+                onChange={handleLogoFile}
+              />
+              {form.logo && canSave && (
+                <button type="button" className="pos-btn-secondary text-xs" onClick={() => update("logo", "")}>
+                  {lang === "ar" ? "إزالة الشعار" : "Remove logo"}
+                </button>
+              )}
+            </div>
+            {logoError && <p className="text-xs text-destructive mt-1">{logoError}</p>}
           </div>
           <div>
             <label className="pos-label">{lang === "ar" ? "الرقم الضريبي" : "VAT Number"}</label>

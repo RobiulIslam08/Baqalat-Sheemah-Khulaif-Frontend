@@ -39,6 +39,30 @@ export function downloadMonthlySalesPdf({ month, sales, settings, isReturn = fal
   const usableWidth = pageWidth - 80;
 
   let y = 42;
+  const logoFormat = settings?.logo?.startsWith("data:image/png")
+    ? "PNG"
+    : settings?.logo?.startsWith("data:image/jpeg")
+      ? "JPEG"
+      : null;
+  if (logoFormat) {
+    try {
+      const props = doc.getImageProperties(settings.logo);
+      const maxW = 120;
+      const maxH = 68;
+      const ratio = props.width ? props.height / props.width : 1;
+      let w = maxW;
+      let h = maxW * ratio;
+      if (h > maxH) {
+        h = maxH;
+        w = maxH / ratio;
+      }
+      doc.addImage(settings.logo, logoFormat, 40, y, w, h);
+      y += h + 10;
+    } catch {
+      // A broken image must not block the report download.
+    }
+  }
+
   doc.setFontSize(14);
   doc.setFont(undefined, "bold");
   const storeNameLines = doc.splitTextToSize(storeName, usableWidth);

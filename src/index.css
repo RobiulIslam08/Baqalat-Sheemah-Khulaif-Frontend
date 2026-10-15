@@ -230,6 +230,16 @@
 
 @media print {
   /* Store name — বড় ও Bold */
+  .receipt-logo {
+    display: block !important;
+    margin: 0 auto 4px !important;
+    width: 56mm !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: 32mm !important;
+    object-fit: contain !important;
+  }
+
   .receipt-store-name {
     font-size: 20px !important;
     font-weight: 900 !important;
@@ -251,7 +261,7 @@
 
   /* Invoice info box */
   .receipt-invoice-box {
-    border: 1.5px solid #000 !important;
+    border: none !important;
     padding: 6px !important;
     margin: 5px 0 !important;
   }
@@ -291,7 +301,7 @@
 
   /* Summary box */
   .receipt-summary-box {
-    border: 1.5px solid #000 !important;
+    border: none !important;
     padding: 6px !important;
     margin: 5px 0 !important;
   }

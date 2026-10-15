@@ -21,11 +21,15 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [license, setLicense] = useState(null);
+  const [logo, setLogo] = useState("");
 
   useEffect(() => {
     apiGet("/license/status", {}, { skipAuth: true })
       .then((res) => setLicense(res?.data || null))
       .catch(() => setLicense(null));
+    apiGet("/settings/branding", {}, { skipAuth: true })
+      .then((res) => setLogo(res?.data?.logo || ""))
+      .catch(() => setLogo(""));
   }, []);
 
   const labels = {
@@ -67,9 +71,13 @@ export default function LoginPage() {
       <div className="login-card">
         {/* Header */}
         <div className="login-header">
-          <div className="login-icon">
-            <LogIn size={28} />
-          </div>
+          {logo ? (
+            <img src={logo} alt="" className="login-logo" />
+          ) : (
+            <div className="login-icon">
+              <LogIn size={28} />
+            </div>
+          )}
           <h1 className="login-title">{labels.title}</h1>
           <p className="login-subtitle">{labels.subtitle}</p>
         </div>
@@ -187,6 +195,15 @@ export default function LoginPage() {
         .login-header {
           text-align: center;
           margin-bottom: 1.5rem;
+        }
+        .login-logo {
+          display: block;
+          width: 160px;
+          max-width: 100%;
+          height: auto;
+          max-height: 110px;
+          object-fit: contain;
+          margin: 0 auto 0.75rem;
         }
         .login-icon {
           display: inline-flex;
