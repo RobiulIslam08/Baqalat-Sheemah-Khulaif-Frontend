@@ -65,6 +65,7 @@ export default function SalesPage() {
   const [focusRowId, setFocusRowId] = useState(null);
   const codeInputRefs = useRef({});
   const codeResolveTimers = useRef({});
+  const amountPaidEdited = useRef(false);
   const productsRef = useRef(allProducts);
   const langRef = useRef(lang);
   const vatPercentRef = useRef(vatPercent);
@@ -92,6 +93,12 @@ export default function SalesPage() {
   // Since row totals are inclusive of VAT, netAmount is simply totalAmount - discountAmt
   const netAmount = totalAmount - discountAmt;
   const vatAmt = (netAmount / (100 + parseFloat(vatPercent))) * parseFloat(vatPercent);
+
+  // Amount Paid follows Total Amount until the cashier types their own figure.
+  useEffect(() => {
+    if (amountPaidEdited.current) return;
+    setAmountPaid(totalAmount > 0 ? totalAmount.toFixed(2) : "");
+  }, [totalAmount]);
 
   // Auto-calculate balance
   useEffect(() => {
@@ -297,7 +304,7 @@ export default function SalesPage() {
       return;
     }
     const paidBlank = String(amountPaid).trim() === "";
-    const paidAmt = paidBlank ? netAmount : (parseFloat(amountPaid) || 0);
+    const paidAmt = paidBlank ? totalAmount : (parseFloat(amountPaid) || 0);
     const finalBalance = paidAmt - netAmount;
 
     const payload = {
@@ -370,6 +377,7 @@ export default function SalesPage() {
   };
 
   const resetForm = () => {
+    amountPaidEdited.current = false;
     setRows([emptyRow(1)]);
     setCustomer("");
     setAmountPaid("");
@@ -461,7 +469,10 @@ export default function SalesPage() {
             type="number"
             className="pos-input"
             value={amountPaid}
-            onChange={(e) => setAmountPaid(e.target.value)}
+            onChange={(e) => {
+              amountPaidEdited.current = true;
+              setAmountPaid(e.target.value);
+            }}
             placeholder="0.00"
             min="0"
           />
