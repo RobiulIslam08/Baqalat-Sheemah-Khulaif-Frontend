@@ -64,6 +64,8 @@ export default function SettingsPage() {
 
   const [form, setForm] = useState({
     storeName: "",
+    storeNameAr: "",
+    storeNameEn: "",
     vatNumber: "",
     invoicePrefix: "",
     defaultPayment: "Cash",
@@ -180,6 +182,26 @@ export default function SettingsPage() {
               onChange={(e) => update("storeName", e.target.value)}
             />
             {errors.storeName && <p className="text-xs text-destructive mt-1">{errors.storeName}</p>}
+          </div>
+          <div>
+            <label className="pos-label">{lang === "ar" ? "اسم المتجر (عربي) — للفاتورة" : "Store Name (Arabic) — for Invoice"}</label>
+            <input
+              className="pos-input"
+              dir="rtl"
+              value={form.storeNameAr || ""}
+              onChange={(e) => update("storeNameAr", e.target.value)}
+              placeholder="بقالة شيمه خليف عايد العنزي للمواد الغذائية"
+            />
+          </div>
+          <div>
+            <label className="pos-label">{lang === "ar" ? "اسم المتجر (إنجليزي) — للفاتورة" : "Store Name (English) — for Invoice"}</label>
+            <input
+              className="pos-input"
+              dir="ltr"
+              value={form.storeNameEn || ""}
+              onChange={(e) => update("storeNameEn", e.target.value)}
+              placeholder="Baqalat Sheemah Khulaif Aayed Al-Enazi"
+            />
           </div>
           <div className="md:col-span-2">
             <label className="pos-label">{lang === "ar" ? "شعار المتجر" : "Store Logo"}</label>

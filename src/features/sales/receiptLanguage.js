@@ -1,3 +1,5 @@
+import { createElement } from "react";
+
 export function invoiceLanguageOf(settings) {
   const value = settings?.invoiceLanguage;
   if (value === "ar" || value === "en" || value === "both") return value;
@@ -8,14 +10,45 @@ export function receiptDir(mode) {
   return mode === "en" ? "ltr" : "rtl";
 }
 
+/**
+ * Render Arabic and English side-by-side on the SAME line.
+ * Uses an inline-flex wrapper with explicit dir on spans so thermal
+ * printers render crisp text without bidirectional glitching.
+ */
 function bilingual(arabic, english) {
-  return `${arabic}\n\u2066${english}\u2069`;
+  const hasColon = (arabic && /[:：]\s*$/.test(arabic)) || (english && /[:：]\s*$/.test(english));
+  const arClean = (arabic || "").replace(/[:：\s]+$/, "");
+  const enClean = (english || "").replace(/[:：\s]+$/, "");
+
+  return createElement(
+    "span",
+    { className: "receipt-bilingual" },
+    createElement("span", { className: "receipt-line-ar", dir: "rtl" }, arClean),
+    createElement("span", { className: "receipt-sep" }, " / "),
+    createElement("span", { className: "receipt-line-en", dir: "ltr" }, enClean),
+    hasColon ? createElement("span", { className: "receipt-colon" }, " :") : null
+  );
 }
 
 export function receiptText(mode, arabic, english) {
   if (mode === "en") return english;
   if (mode === "ar") return arabic;
   return bilingual(arabic, english);
+}
+
+export function receiptMeta(mode, arabicLabel, englishLabel, value) {
+  if (!value) return null;
+  if (mode === "en") return `${englishLabel} : ${value}`;
+  if (mode === "ar") return `${arabicLabel} : ${value}`;
+  return createElement(
+    "span",
+    { className: "receipt-meta-bilingual" },
+    createElement("span", { className: "receipt-line-ar", dir: "rtl" }, arabicLabel),
+    createElement("span", { className: "receipt-sep" }, " / "),
+    createElement("span", { className: "receipt-line-en", dir: "ltr" }, englishLabel),
+    createElement("span", { className: "receipt-colon" }, " : "),
+    createElement("span", { className: "receipt-meta-val", dir: "ltr" }, String(value))
+  );
 }
 
 export function receiptQrLabel(mode) {
@@ -52,3 +85,5 @@ export function receiptItemName(mode, item, products) {
   }
   return { primary: item.productName || englishName, secondary: "" };
 }
+
+

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSettings } from "@/hooks/useSettings";
 import { useSuppliers } from "@/hooks/useSuppliers";
@@ -93,7 +94,7 @@ export default function ViewPurchaseInvoicePage() {
     )}
 
     {/* ── Hidden Print Div — SalesPage/SalesReportPage এর মতো একই receipt-* class ── */}
-    {selectedPurchase && (
+    {selectedPurchase && typeof document !== "undefined" && createPortal(
       <div id="purchase-print-receipt">
         <div className="receipt-header">
           {settings?.logo && <img src={settings.logo} alt="" className="receipt-logo" />}
@@ -181,7 +182,8 @@ export default function ViewPurchaseInvoicePage() {
           <div>{"استلم من قبل : _______________\n\u2066Received By\u2069"}</div>
           <div style={{marginTop:'16px', fontWeight:700, fontSize:'15px'}}>{"شكراً\n\u2066Thank you\u2069"}</div>
         </div>
-      </div>
+      </div>,
+      document.body
     )}
 
     {/* ── Print-only CSS ── */}
@@ -192,15 +194,24 @@ export default function ViewPurchaseInvoicePage() {
       }
 
       @media print {
+        @page {
+          size: auto;
+          margin: 0mm;
+        }
         * {
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
         }
-        /* Hide everything */
-        body * {
-          visibility: hidden !important;
+        html, body {
+          height: auto !important;
+          min-height: 0 !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #fff !important;
         }
-        /* Show only the print div */
+        #root {
+          display: none !important;
+        }
         #purchase-print-receipt,
         #purchase-print-receipt * {
           visibility: visible !important;
@@ -214,22 +225,21 @@ export default function ViewPurchaseInvoicePage() {
         }
         #purchase-print-receipt {
           display: block !important;
-          position: absolute;
-          left: 0;
-          top: 0;
-          width: 80mm;
-          padding: 3mm 4mm;
-          margin: 0;
+          position: static !important;
+          width: 80mm !important;
+          max-width: 80mm !important;
+          padding: 2mm 3mm !important;
+          margin: 0 !important;
           background: #fff !important;
           color: #000 !important;
           font-weight: 700 !important;
-          font-size: 15px !important;
-          line-height: 1.3 !important;
-          box-sizing: border-box;
-        }
-        @page {
-          size: 80mm auto;
-          margin: 0mm;
+          font-size: 12px !important;
+          line-height: 1.25 !important;
+          box-sizing: border-box !important;
+          page-break-after: avoid !important;
+          break-after: avoid !important;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
         }
       }
     `}</style>

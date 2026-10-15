@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useCustomers } from "@/hooks/useCustomers";
@@ -9,7 +10,7 @@ import { Plus, Trash2, Loader2 } from "lucide-react";
 import QRCode from "qrcode";
 import { showError } from "@/lib/toast-helpers";
 import { printReceipt } from "@/lib/printReceipt";
-import { invoiceLanguageOf, receiptDir, receiptItemName, receiptPayment, receiptQrLabel, receiptSaleType, receiptText, receiptVatLabel } from "./receiptLanguage";
+import { invoiceLanguageOf, receiptDir, receiptItemName, receiptMeta, receiptPayment, receiptQrLabel, receiptSaleType, receiptText, receiptVatLabel } from "./receiptLanguage";
 
 const SCAN_IDLE_MS = 80;
 
@@ -527,17 +528,33 @@ export default function SalesPage() {
     </div>
 
     {/* ZATCA Compliant Arabic Thermal Invoice (Fatura) Print-Only Container */}
-    {printData && (
+    {printData && typeof document !== "undefined" && createPortal(
       <div id="print-receipt" dir={receiptDir(invoiceMode)}>
         <div className="receipt-header">
           {settings?.logo && <img src={settings.logo} alt="" className="receipt-logo" />}
           <h2 className="receipt-store-name">
-            {settings?.storeName || (invoiceMode === "en" ? "Baqalat Sheemah Khulaif Aayed Al-Enazi Lil-Mawad Al-Ghidha'iyyah" : "بقالة شيمه خليف عايد العنزي للمواد الغذائية")}
+            {invoiceMode === "both" ? (
+              <span className="receipt-store-bilingual">
+                <span className="receipt-line-ar" dir="rtl">
+                  {settings?.storeNameAr || settings?.storeName || "بقالة شيمه خليف عايد العنزي للمواد الغذائية"}
+                </span>
+                {(settings?.storeNameEn || (settings?.storeNameAr ? "" : settings?.storeName)) && (
+                  <>
+                    <span className="receipt-sep"> - </span>
+                    <span className="receipt-line-en" dir="ltr">
+                      {settings?.storeNameEn || settings?.storeName}
+                    </span>
+                  </>
+                )}
+              </span>
+            ) : invoiceMode === "en"
+              ? (settings?.storeNameEn || settings?.storeName || "Baqalat Sheemah Khulaif Aayed Al-Enazi Lil-Mawad Al-Ghidha'iyyah")
+              : (settings?.storeNameAr || settings?.storeName || "بقالة شيمه خليف عايد العنزي للمواد الغذائية")}
           </h2>
           <p className="receipt-subtext">{settings?.storeAddress || "خميس مشيط - مخطط الحسام - الصناعية القديم"}</p>
-          <p className="receipt-subtext">{receiptText(invoiceMode, `السجل التجاري : ${settings?.crNumber || "7006133065"}`, `CR : ${settings?.crNumber || "7006133065"}`)}</p>
-          <p className="receipt-subtext">{receiptText(invoiceMode, `الرقم الضريبي : ${settings?.vatNumber || "311465715100003"}`, `VAT No : ${settings?.vatNumber || "311465715100003"}`)}</p>
-          <p className="receipt-subtext">{receiptText(invoiceMode, `جوال : ${settings?.supportContact || "0555917189"}`, `Mobile : ${settings?.supportContact || "0555917189"}`)}</p>
+          <p className="receipt-subtext">{receiptMeta(invoiceMode, "السجل التجاري", "CR", settings?.crNumber || "7006133065")}</p>
+          <p className="receipt-subtext">{receiptMeta(invoiceMode, "الرقم الضريبي", "VAT No", settings?.vatNumber || "311465715100003")}</p>
+          <p className="receipt-subtext">{receiptMeta(invoiceMode, "جوال", "Mobile", settings?.supportContact || "0555917189")}</p>
         </div>
         
         <div className="receipt-divider-arrow">------------------------------------------</div>
@@ -593,8 +610,12 @@ export default function SalesPage() {
               return (
                 <tr key={idx}>
                   <td className={nameAlign}>
-                    {names.primary}
-                    {names.secondary && <div className="receipt-item-en" dir="ltr">{names.secondary}</div>}
+                    <span className="receipt-item-primary" dir="rtl">{names.primary}</span>
+                    {names.secondary && (
+                      <span className="receipt-item-secondary" dir="ltr">
+                        {" / "}{names.secondary}
+                      </span>
+                    )}
                   </td>
                   <td className="text-center">{Number(item.quantity).toFixed(1)}</td>
                   <td className="text-center">{(Number(item.total) / (Number(item.quantity) || 1)).toFixed(2)}</td>
@@ -649,18 +670,30 @@ export default function SalesPage() {
           {qrBase64 && <img src={qrBase64} alt="ZATCA QR" className="receipt-qr-img" />}
           <div className="receipt-qr-text">{receiptQrLabel(invoiceMode)}</div>
         </div>
-      </div>
+      </div>,
+      document.body
     )}
 
     <style>{`
       /* Hide standard app elements when printing */
       @media print {
+        @page {
+          size: auto;
+          margin: 0mm;
+        }
         * {
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
         }
-        body * {
-          visibility: hidden !important;
+        html, body {
+          height: auto !important;
+          min-height: 0 !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #fff !important;
+        }
+        #root {
+          display: none !important;
         }
         #print-receipt, #print-receipt * {
           visibility: visible !important;
@@ -673,22 +706,22 @@ export default function SalesPage() {
           text-rendering: geometricPrecision !important;
         }
         #print-receipt {
-          position: absolute;
-          left: 0;
-          top: 0;
-          width: 80mm;
-          padding: 3mm 4mm;
-          margin: 0;
+          display: block !important;
+          position: static !important;
+          width: 80mm !important;
+          max-width: 80mm !important;
+          padding: 2mm 3mm !important;
+          margin: 0 !important;
           background: #fff !important;
           color: #000 !important;
           font-weight: 700 !important;
-          box-sizing: border-box;
-          font-size: 15px !important;
-          line-height: 1.3 !important;
-        }
-        @page {
-          size: 80mm auto;
-          margin: 0mm;
+          box-sizing: border-box !important;
+          font-size: 12px !important;
+          line-height: 1.25 !important;
+          page-break-after: avoid !important;
+          break-after: avoid !important;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
         }
       }
 
@@ -708,140 +741,169 @@ export default function SalesPage() {
       }
       .receipt-logo {
         display: block;
-        margin: 0 auto 4px;
+        margin: 0 auto 3px;
         width: 56mm;
         max-width: 100%;
         height: auto;
-        max-height: 32mm;
+        max-height: 18mm;
         object-fit: contain;
         image-rendering: high-quality;
       }
       .receipt-store-name {
-        font-size: 20px;
+        font-size: 15px !important;
         font-weight: 700;
-        margin: 0 0 3px 0;
+        margin: 0 0 2px 0;
         letter-spacing: 0;
-        line-height: 1.55;
-        white-space: pre-line;
+        line-height: 1.25;
       }
       .receipt-subtext {
-        font-size: 15px;
-        margin: 0 0 2px 0;
+        font-size: 12px !important;
+        margin: 0 0 1px 0;
         font-weight: 700;
-        line-height: 1.55;
-        white-space: pre-line;
+        line-height: 1.25;
       }
-      .receipt-divider-arrow {
-        text-align: center;
-        margin: 3px 0;
-        letter-spacing: -0.5px;
-        font-size: 12px;
-      }
+      .receipt-divider-arrow,
       .receipt-divider {
         text-align: center;
-        margin: 3px 0;
+        margin: 1px 0;
         letter-spacing: -0.5px;
-        font-size: 12px;
+        font-size: 11px;
+        line-height: 1;
       }
-      .receipt-invoice-box {
+      .receipt-invoice-box,
+      .receipt-summary-box {
         border: none;
-        padding: 6px;
-        margin: 5px 0;
+        padding: 1px 0;
+        margin: 1px 0;
       }
       .receipt-invoice-title {
         font-weight: 700;
-        font-size: 16px;
+        font-size: 13px !important;
         text-align: center;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
         border-bottom: 1px dashed #000;
-        padding-bottom: 3px;
-        line-height: 1.5;
-        white-space: pre-line;
+        padding-bottom: 2px;
+        line-height: 1.25;
       }
-      .receipt-invoice-row {
+      .receipt-invoice-row,
+      .receipt-summary-row {
         display: flex;
         justify-content: space-between;
-        align-items: flex-start;
-        font-size: 15px;
+        align-items: center;
+        font-size: 12px !important;
         font-weight: 700;
-        line-height: 1.5;
-        margin-bottom: 2px;
-        padding: 1px 0;
+        line-height: 1.25;
+        margin-bottom: 1px;
+        padding: 0;
       }
       .receipt-invoice-row span,
       .receipt-summary-row span,
       .receipt-payment-row span,
       .receipt-items-table th,
       .receipt-qr-text {
-        white-space: pre-line;
         letter-spacing: 0;
       }
       .receipt-items-table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 14px;
-        margin: 5px 0;
+        font-size: 12px !important;
+        margin: 2px 0;
       }
       .receipt-items-table th {
         font-weight: bold;
         border-bottom: 1.5px solid #000;
         border-top: 1.5px solid #000;
-        padding: 3px 2px;
-        font-size: 13px;
+        padding: 2px 2px;
+        font-size: 11.5px !important;
       }
       .receipt-items-table td {
-        padding: 4px 2px;
+        padding: 2px 2px;
         border-bottom: 1px dotted #999;
-      }
-      .receipt-summary-box {
-        border: none;
-        padding: 6px;
-        margin: 5px 0;
-      }
-      .receipt-summary-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        font-size: 15px;
-        font-weight: 700;
-        line-height: 1.5;
-        margin-bottom: 2px;
-        padding: 1px 0;
       }
       .receipt-payment-row {
         display: flex;
         justify-content: space-between;
-        align-items: flex-start;
-        font-size: 16px;
+        align-items: center;
+        font-size: 13px !important;
         font-weight: 700;
-        line-height: 1.5;
-        margin-bottom: 2px;
-        padding: 2px 4px;
-      }
-      .receipt-item-en {
-        display: block;
-        margin-top: 1px;
-        font-size: 14px;
-        font-weight: 600;
-        letter-spacing: 0;
-        line-height: 1.4;
+        line-height: 1.25;
+        margin-bottom: 1px;
+        padding: 0;
       }
       .receipt-qr-section {
         display: flex;
         flex-direction: column;
         align-items: center;
-        margin-top: 10px;
+        margin-top: 4px;
         text-align: center;
       }
       .receipt-qr-img {
-        width: 130px;
-        height: 130px;
+        width: 84px;
+        height: 84px;
+      }
+      .receipt-bilingual {
+        display: inline-flex;
+        align-items: baseline;
+        direction: rtl;
+        gap: 2px;
+        white-space: nowrap;
+      }
+      .receipt-line-ar {
+        display: inline;
+        direction: rtl;
+        font-size: inherit;
+        font-weight: 700;
+        line-height: 1.35;
+      }
+      .receipt-sep {
+        display: inline;
+        font-weight: 600;
+        opacity: 0.8;
+        margin: 0 1px;
+      }
+      .receipt-line-en {
+        display: inline;
+        direction: ltr;
+        font-size: 0.9em;
+        font-weight: 600;
+        line-height: 1.3;
+      }
+      .receipt-colon {
+        display: inline;
+        font-weight: 700;
+      }
+      .receipt-meta-bilingual {
+        display: inline-flex;
+        align-items: baseline;
+        direction: rtl;
+        gap: 2px;
+        white-space: nowrap;
+      }
+      .receipt-meta-val {
+        font-weight: 700;
+      }
+      .receipt-item-primary {
+        display: inline;
+        font-weight: 700;
+      }
+      .receipt-item-secondary {
+        display: inline;
+        font-weight: 600;
+        font-size: 0.9em;
+      }
+      .receipt-store-bilingual {
+        display: inline;
+        text-align: center;
+      }
+      .receipt-items-table th .receipt-line-en {
+        font-size: 10px;
+        font-weight: 600;
       }
       .receipt-qr-text {
-        font-size: 14px;
+        font-size: 13px;
         margin-top: 3px;
         font-weight: 700;
-        line-height: 1.45;
+        line-height: 1.4;
       }
     `}</style>
   </div>);
