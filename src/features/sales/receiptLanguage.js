@@ -16,7 +16,6 @@ export function receiptDir(mode) {
  * printers render crisp text without bidirectional glitching.
  */
 function bilingual(arabic, english) {
-  const hasColon = (arabic && /[:：]\s*$/.test(arabic)) || (english && /[:：]\s*$/.test(english));
   const arClean = (arabic || "").replace(/[:：\s]+$/, "");
   const enClean = (english || "").replace(/[:：\s]+$/, "");
 
@@ -25,8 +24,7 @@ function bilingual(arabic, english) {
     { className: "receipt-bilingual" },
     createElement("span", { className: "receipt-line-ar", dir: "rtl" }, arClean),
     createElement("span", { className: "receipt-sep" }, " / "),
-    createElement("span", { className: "receipt-line-en", dir: "ltr" }, enClean),
-    hasColon ? createElement("span", { className: "receipt-colon" }, " :") : null
+    createElement("span", { className: "receipt-line-en", dir: "ltr" }, enClean)
   );
 }
 

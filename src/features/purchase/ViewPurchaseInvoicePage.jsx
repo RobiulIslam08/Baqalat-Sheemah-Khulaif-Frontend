@@ -226,20 +226,22 @@ export default function ViewPurchaseInvoicePage() {
         #purchase-print-receipt {
           display: block !important;
           position: static !important;
-          width: 80mm !important;
-          max-width: 80mm !important;
-          padding: 2mm 3mm !important;
+          width: 70mm !important;
+          max-width: 70mm !important;
+          min-width: 70mm !important;
+          padding: 1mm 2mm !important;
           margin: 0 !important;
           background: #fff !important;
           color: #000 !important;
           font-weight: 700 !important;
-          font-size: 12px !important;
+          font-size: 11.5px !important;
           line-height: 1.25 !important;
           box-sizing: border-box !important;
           page-break-after: avoid !important;
           break-after: avoid !important;
           page-break-inside: avoid !important;
           break-inside: avoid !important;
+          overflow: hidden !important;
         }
       }
     `}</style>

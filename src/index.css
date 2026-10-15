@@ -252,21 +252,24 @@
   #purchase-print-receipt {
     display: block !important;
     position: static !important;
-    width: 80mm !important;
-    max-width: 80mm !important;
+    width: 70mm !important;
+    max-width: 70mm !important;
+    min-width: 70mm !important;
     margin: 0 !important;
-    padding: 2mm 3mm !important;
+    padding: 2mm 2.5mm 6mm 2.5mm !important;
     box-sizing: border-box !important;
     transform: none !important;
     font-family: "Noto Sans Arabic", "Segoe UI", Tahoma, sans-serif !important;
     font-weight: 700 !important;
     font-synthesis: none !important;
     letter-spacing: 0 !important;
-    line-height: 1.25 !important;
+    font-size: 12px !important;
+    line-height: 1.55 !important;
     page-break-after: avoid !important;
     break-after: avoid !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+    overflow: hidden !important;
     -webkit-font-smoothing: auto !important;
     -moz-osx-font-smoothing: auto !important;
     text-rendering: geometricPrecision !important;
@@ -282,63 +285,76 @@
     text-rendering: geometricPrecision !important;
   }
 
+  .receipt-header {
+    text-align: center !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-bottom: 6px !important;
+  }
+
   .receipt-logo {
     display: block !important;
-    margin: 0 auto 4px !important;
-    width: 56mm !important;
-    max-width: 100% !important;
-    height: auto !important;
-    max-height: 18mm !important;
+    margin: 0 auto 8px auto !important;
+    width: 48mm !important;
+    height: 48mm !important;
+    max-width: 48mm !important;
+    max-height: 48mm !important;
     object-fit: contain !important;
-    image-rendering: auto !important;
     image-rendering: high-quality !important;
   }
 
   .receipt-store-name {
-    font-size: 16px !important;
+    font-size: 14px !important;
     font-weight: 700 !important;
     letter-spacing: 0 !important;
-    line-height: 1.25 !important;
-    margin: 0 0 1px 0 !important;
-    white-space: pre-line !important;
+    line-height: 1.4 !important;
+    margin: 0 0 4px 0 !important;
+    text-align: center !important;
   }
 
   .receipt-subtext {
-    font-size: 12px !important;
+    font-size: 11.5px !important;
     font-weight: 700 !important;
-    line-height: 1.25 !important;
-    margin: 0 !important;
-    white-space: pre-line !important;
+    line-height: 1.45 !important;
+    margin: 0 0 2.5px 0 !important;
+    text-align: center !important;
   }
 
   /* Dividers */
   .receipt-divider,
   .receipt-divider-arrow {
-    font-size: 12px !important;
-    margin: 1px 0 !important;
+    border-top: 1px dashed #000 !important;
+    margin: 6px 0 !important;
+    height: 0 !important;
+    width: 100% !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
   }
 
   .receipt-invoice-box {
     border: none !important;
     padding: 2px 0 !important;
-    margin: 2px 0 !important;
+    margin: 4px 0 !important;
   }
 
   .receipt-invoice-title {
-    font-size: 14px !important;
+    font-size: 13.5px !important;
     font-weight: 700 !important;
-    line-height: 1.25 !important;
-    margin-bottom: 2px !important;
-    padding-bottom: 2px !important;
-    white-space: pre-line !important;
+    line-height: 1.4 !important;
+    margin-bottom: 6px !important;
+    padding-bottom: 4px !important;
+    border-bottom: 1px dashed #000 !important;
+    text-align: center !important;
   }
 
   .receipt-invoice-row {
     font-size: 12px !important;
     font-weight: 700 !important;
-    line-height: 1.25 !important;
-    margin-bottom: 0 !important;
-    padding: 0 !important;
+    line-height: 1.55 !important;
+    margin-bottom: 3.5px !important;
+    padding: 1px 0 !important;
     align-items: center !important;
   }
   .receipt-invoice-row span,
@@ -352,24 +368,44 @@
 
   /* Items table */
   .receipt-items-table {
-    font-size: 12px !important;
-    margin: 2px 0 !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    font-size: 11.5px !important;
+    margin: 5px 0 !important;
   }
   .receipt-items-table th {
     font-size: 11.5px !important;
     font-weight: 700 !important;
-    line-height: 1.2 !important;
-    padding: 2px 2px !important;
+    line-height: 1.35 !important;
+    padding: 4px 1px !important;
     border-top: 1.5px solid #000 !important;
     border-bottom: 1.5px solid #000 !important;
-    white-space: nowrap !important;
   }
   .receipt-items-table td {
-    font-size: 12px !important;
+    font-size: 11.5px !important;
     font-weight: 700 !important;
-    line-height: 1.25 !important;
-    padding: 2px 2px !important;
+    line-height: 1.4 !important;
+    padding: 5px 1px !important;
     border-bottom: 1px dotted #999 !important;
+    vertical-align: top !important;
+  }
+  .receipt-th-item, .receipt-td-item {
+    width: 40% !important;
+    text-align: right !important;
+    word-break: break-word !important;
+  }
+  .receipt-th-qty, .receipt-td-qty {
+    width: 16% !important;
+    text-align: center !important;
+  }
+  .receipt-th-price, .receipt-td-price {
+    width: 20% !important;
+    text-align: center !important;
+  }
+  .receipt-th-total, .receipt-td-total {
+    width: 24% !important;
+    text-align: left !important;
   }
   .receipt-item-primary {
     display: inline !important;
@@ -378,33 +414,33 @@
   .receipt-item-secondary,
   .receipt-item-en {
     display: inline !important;
-    font-size: 11px !important;
+    font-size: 10px !important;
     font-weight: 600 !important;
     letter-spacing: 0 !important;
-    line-height: 1.3 !important;
+    line-height: 1.35 !important;
   }
 
   /* Summary box */
   .receipt-summary-box {
     border: none !important;
     padding: 2px 0 !important;
-    margin: 2px 0 !important;
+    margin: 4px 0 !important;
   }
   .receipt-summary-row {
     font-size: 12px !important;
     font-weight: 700 !important;
-    line-height: 1.25 !important;
-    margin-bottom: 0 !important;
-    padding: 0 !important;
+    line-height: 1.55 !important;
+    margin-bottom: 3.5px !important;
+    padding: 1px 0 !important;
     align-items: center !important;
   }
 
   .receipt-payment-row {
-    font-size: 13px !important;
+    font-size: 12.5px !important;
     font-weight: 700 !important;
-    line-height: 1.25 !important;
-    margin-bottom: 0 !important;
-    padding: 0 !important;
+    line-height: 1.55 !important;
+    margin-bottom: 3.5px !important;
+    padding: 1px 0 !important;
     align-items: center !important;
   }
 
@@ -421,7 +457,7 @@
     direction: rtl !important;
     font-size: inherit !important;
     font-weight: 700 !important;
-    line-height: 1.35 !important;
+    line-height: 1.4 !important;
   }
   .receipt-sep {
     display: inline !important;
@@ -434,11 +470,7 @@
     direction: ltr !important;
     font-size: 0.9em !important;
     font-weight: 600 !important;
-    line-height: 1.3 !important;
-  }
-  .receipt-colon {
-    display: inline !important;
-    font-weight: 700 !important;
+    line-height: 1.35 !important;
   }
   .receipt-meta-bilingual {
     display: inline-flex !important;
@@ -451,8 +483,19 @@
     font-weight: 700 !important;
   }
   .receipt-store-bilingual {
-    display: inline !important;
+    display: block !important;
     text-align: center !important;
+  }
+  .receipt-store-ar {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    line-height: 1.4 !important;
+  }
+  .receipt-store-en {
+    font-size: 11.5px !important;
+    font-weight: 600 !important;
+    line-height: 1.35 !important;
+    margin-top: 2px !important;
   }
   .receipt-items-table th .receipt-line-en {
     font-size: 10px !important;
@@ -461,16 +504,42 @@
 
   /* QR code */
   .receipt-qr-section {
-    margin-top: 4px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-top: 10px !important;
+    margin-bottom: 6px !important;
+    text-align: center !important;
+    width: 100% !important;
   }
   .receipt-qr-img {
-    width: 88px !important;
-    height: 88px !important;
+    width: 105px !important;
+    height: 105px !important;
+    display: block !important;
+    margin: 0 auto !important;
   }
   .receipt-qr-text {
-    font-size: 12px !important;
+    font-size: 11.5px !important;
     font-weight: 700 !important;
-    line-height: 1.45 !important;
+    line-height: 1.35 !important;
+    margin-top: 5px !important;
+    text-align: center !important;
+  }
+  .receipt-footer-msg {
+    font-size: 12.5px !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    margin-top: 8px !important;
+    line-height: 1.4 !important;
+    border-top: 1px dashed #000 !important;
+    padding-top: 6px !important;
+  }
+  .receipt-footer-sub {
+    font-size: 10.5px !important;
+    font-weight: 600 !important;
+    text-align: center !important;
     margin-top: 3px !important;
+    line-height: 1.35 !important;
   }
 }
