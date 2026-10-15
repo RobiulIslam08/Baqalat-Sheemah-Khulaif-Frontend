@@ -1,11 +1,14 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useProducts, useUpdateProduct } from "@/hooks/useProducts";
+import { useAuthContext } from "@/contexts/AuthContext";
+import { useProducts, useUpdateProduct, useDeleteProduct } from "@/hooks/useProducts";
 import { useFormulations } from "@/hooks/useFormulations";
-import { Search, Pencil, X, Loader2 } from "lucide-react";
+import { Search, Pencil, Trash2, X, Loader2 } from "lucide-react";
 
 export default function ViewProductsPage() {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
+  const { user } = useAuthContext();
+  const canDelete = user?.role === "admin" || user?.role === "developer";
   const [keyword, setKeyword] = useState("");
   const [searchBy, setSearchBy] = useState("Select");
   const PAGE_SIZE = 100;
@@ -13,10 +16,12 @@ export default function ViewProductsPage() {
   const [searchParams, setSearchParams] = useState({ page: 1, limit: PAGE_SIZE });
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
+  const [pendingDelete, setPendingDelete] = useState(null);
 
   const { data, isLoading, isFetching } = useProducts(searchParams);
   const { data: formulationData } = useFormulations();
   const updateProduct = useUpdateProduct();
+  const deleteProduct = useDeleteProduct();
   const products = data?.products || [];
   const meta = data?.meta || {};
   const totalRecords = Number(meta.total || meta.totalRecords || meta.count || meta.totalCount || meta.totalItems || 0);
@@ -85,6 +90,26 @@ export default function ViewProductsPage() {
 
   const ef = (key, val) => setEditForm((f) => ({ ...f, [key]: val }));
 
+  const cancelDelete = () => {
+    if (deleteProduct.isPending) return;
+    setPendingDelete(null);
+  };
+
+  const confirmDelete = () => {
+    if (!pendingDelete) return;
+    if (editingId === pendingDelete._id) cancelEdit();
+    deleteProduct.mutate(pendingDelete._id, { onSuccess: () => setPendingDelete(null) });
+  };
+
+  useEffect(() => {
+    if (!pendingDelete) return;
+    const onKey = (event) => {
+      if (event.key === "Escape") cancelDelete();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pendingDelete, deleteProduct.isPending]);
+
   const goToPage = (p) => {
     if (!p || p < 1 || p > totalPages) return;
     setPage(p);
@@ -139,7 +164,21 @@ export default function ViewProductsPage() {
             <td>{p.mrp}</td>
             <td>{p.purchasePrice}</td>
             <td>{p.sellingPrice}</td>
-            <td><button onClick={() => startEdit(p)} className="text-primary hover:opacity-70" title={t("viewProducts.edit")}><Pencil size={14} /></button></td>
+            <td>
+              <div className="flex items-center gap-2">
+                <button onClick={() => startEdit(p)} className="text-primary hover:opacity-70" title={t("viewProducts.edit")}><Pencil size={14} /></button>
+                {canDelete && (
+                  <button
+                    onClick={() => setPendingDelete(p)}
+                    disabled={deleteProduct.isPending}
+                    className="text-destructive hover:opacity-70 disabled:opacity-50"
+                    title={t("viewProducts.delete")}
+                  >
+                    {deleteProduct.isPending && deleteProduct.variables === p._id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                  </button>
+                )}
+              </div>
+            </td>
           </tr>))}
         </tbody>
       </table>
@@ -290,10 +329,38 @@ export default function ViewProductsPage() {
             </section>
           </div>
           <div className="p-4 border-t flex justify-end gap-2">
-            <button type="button" className="pos-btn-secondary" onClick={cancelEdit}>{lang === "ar" ? "إلغاء" : "Cancel"}</button>
+            <button type="button" className="pos-btn-secondary" onClick={cancelEdit}>{t("viewProducts.cancel")}</button>
             <button type="button" className="pos-btn-primary gap-1" onClick={saveEdit} disabled={updateProduct.isPending}>
               {updateProduct.isPending && <Loader2 size={14} className="animate-spin" />}
               {t("common.save")}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {pendingDelete && (
+      <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto p-4 bg-black/50" onClick={cancelDelete}>
+        <div className="bg-card w-full max-w-md max-h-[90vh] overflow-hidden rounded-lg shadow-xl flex flex-col" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+          <div className="p-6 text-center space-y-4 overflow-y-auto">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+              <Trash2 size={26} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold">{t("viewProducts.deleteTitle")}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{t("viewProducts.deleteMessage")}</p>
+            </div>
+            <div className="rounded-md border bg-muted/40 px-4 py-3 text-start">
+              <div className="font-semibold">{pendingDelete.productName}</div>
+              {pendingDelete.arabicName && <div className="text-sm text-muted-foreground" dir="rtl">{pendingDelete.arabicName}</div>}
+              <div className="mt-1 text-sm text-muted-foreground">{pendingDelete.productCode}</div>
+            </div>
+          </div>
+          <div className="p-4 border-t flex justify-end gap-2 shrink-0">
+            <button type="button" className="pos-btn-secondary" onClick={cancelDelete} disabled={deleteProduct.isPending}>{t("viewProducts.cancel")}</button>
+            <button type="button" className="pos-btn-destructive gap-1" onClick={confirmDelete} disabled={deleteProduct.isPending}>
+              {deleteProduct.isPending && <Loader2 size={14} className="animate-spin" />}
+              {t("viewProducts.delete")}
             </button>
           </div>
         </div>

@@ -137,6 +137,10 @@
   "viewProducts.purchasePrice": "Purchase Price",
   "viewProducts.sellingPrice": "Selling Price",
   "viewProducts.edit": "Edit",
+  "viewProducts.delete": "Delete",
+  "viewProducts.deleteTitle": "Delete this product?",
+  "viewProducts.deleteMessage": "This product will be removed from the list.",
+  "viewProducts.cancel": "Cancel",
 
   "stockCorrection.title": "STOCK CORRECTION",
   "stockCorrection.totalQty": "TOTAL QUANTITY",

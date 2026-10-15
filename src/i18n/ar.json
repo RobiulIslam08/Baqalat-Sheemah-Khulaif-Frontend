@@ -137,6 +137,10 @@
   "viewProducts.purchasePrice": "سعر الشراء",
   "viewProducts.sellingPrice": "سعر البيع",
   "viewProducts.edit": "تعديل",
+  "viewProducts.delete": "حذف",
+  "viewProducts.deleteTitle": "حذف هذا المنتج؟",
+  "viewProducts.deleteMessage": "سيتم إزالة هذا المنتج من القائمة.",
+  "viewProducts.cancel": "إلغاء",
 
   "stockCorrection.title": "تصحيح المخزون",
   "stockCorrection.totalQty": "الكمية الإجمالية",
