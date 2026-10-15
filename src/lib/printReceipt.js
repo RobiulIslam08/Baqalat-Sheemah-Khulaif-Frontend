@@ -1,52 +1,25 @@
 /**
- * Print the receipt currently in the DOM (#print-receipt or #purchase-print-receipt).
+ * Print the receipt currently in the DOM (#print-receipt).
  *
- * The receipt is moved to the top of the page for the print job so the rest of
- * the screen does not add a second sheet. Inside the packaged Electron app,
- * printing goes straight to the default printer. In a browser, the print
- * dialog still needs one confirmation.
+ * Inside the packaged Electron desktop app, `window.posDesktop` is exposed
+ * by the preload script and prints silently to the default printer — a true
+ * single click with no OS print dialog. In a normal web browser that bridge
+ * does not exist, so it falls back to window.print() (the browser's own
+ * print dialog still needs one confirmation click — this is a browser
+ * security restriction that cannot be bypassed from web code).
+ *
+ * The receipt stays in place. Moving it, or centering it on a wider page,
+ * makes the thermal printer turn the text sideways and cut it off.
  */
-function findReceipt() {
-  return document.getElementById("print-receipt") || document.getElementById("purchase-print-receipt");
-}
-
 export async function printReceipt() {
-  const receipt = findReceipt();
-  const parent = receipt?.parentNode || null;
-  const next = receipt?.nextSibling || null;
-
-  const restore = () => {
-    document.documentElement.classList.remove("receipt-printing");
-    if (!receipt || !parent) return;
-    if (next && next.parentNode === parent) parent.insertBefore(receipt, next);
-    else parent.appendChild(receipt);
-  };
-
-  if (receipt && parent) {
-    document.body.appendChild(receipt);
-    document.documentElement.classList.add("receipt-printing");
-  }
-
-  try {
-    if (typeof window !== "undefined" && window.posDesktop?.printSilent) {
-      try {
-        const result = await window.posDesktop.printSilent();
-        if (result?.success) return true;
-      } catch {
-        // Fall through to the browser print dialog below
-      }
+  if (typeof window !== "undefined" && window.posDesktop?.printSilent) {
+    try {
+      const result = await window.posDesktop.printSilent();
+      if (result?.success) return true;
+    } catch {
+      // Fall through to the browser print dialog below
     }
-
-    await new Promise((resolve) => {
-      const done = () => {
-        window.removeEventListener("afterprint", done);
-        resolve();
-      };
-      window.addEventListener("afterprint", done);
-      window.print();
-    });
-    return false;
-  } finally {
-    restore();
   }
+  window.print();
+  return false;
 }
