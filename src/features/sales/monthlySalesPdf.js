@@ -56,8 +56,8 @@ export function downloadMonthlySalesPdf({ month, sales, settings, isReturn = fal
         h = maxH;
         w = maxH / ratio;
       }
-      doc.addImage(settings.logo, logoFormat, 40, y, w, h);
-      y += h + 10;
+      doc.addImage(settings.logo, logoFormat, (pageWidth - w) / 2, y, w, h);
+      y += h + 28;
     } catch {
       // A broken image must not block the report download.
     }
