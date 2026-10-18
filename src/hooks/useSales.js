@@ -13,6 +13,8 @@ export function useSales(params = {}, options = {}) {
     queryKey: [QUERY_KEY, params],
     queryFn: () => saleService.getAll(params),
     select: (res) => ({ sales: res?.data || [], meta: res?.meta || {} }),
+    staleTime: 0,
+    refetchOnMount: true,
     ...options,
   });
 }
@@ -23,6 +25,8 @@ export function useSaleByBillNo(billNo, options = {}) {
     queryFn: () => saleService.getByBillNo(billNo),
     select: (res) => res?.data,
     enabled: !!billNo,
+    staleTime: 0,
+    refetchOnMount: true,
     ...options,
   });
 }

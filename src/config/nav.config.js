@@ -74,6 +74,12 @@ export function getNavItems(t, role) {
       path: "/settings",
     },
     {
+      key: "zatca",
+      label: t("nav.zatca") || "ZATCA",
+      path: "/zatca",
+      roles: ["admin", "manager"],
+    },
+    {
       key: "reports",
       label: t("nav.reports"),
       path: "/sales-report",

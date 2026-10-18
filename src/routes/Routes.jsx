@@ -45,6 +45,7 @@ import CustomerCreditMasterPage from "@/features/masters/CustomerCreditMasterPag
 import BarcodePage from "@/features/barcode/BarcodePage";
 import ExpensePage from "@/features/expense/ExpensePage";
 import SettingsPage from "@/features/settings/SettingsPage";
+import ZatcaDashboardPage from "@/features/zatca/ZatcaDashboardPage";
 import ChangePasswordPage from "@/features/settings/ChangePasswordPage";
 import BackupPage from "@/features/backup/BackupPage";
 import LicensePage from "@/features/license/LicensePage";
@@ -115,6 +116,7 @@ export default function AppRoutes() {
       <Route path="/barcode" element={<ProtectedRoute><BarcodePage /></ProtectedRoute>} />
       <Route path="/expense" element={<ProtectedRoute><ExpensePage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+      <Route path="/zatca" element={<ProtectedRoute roles={["admin", "manager"]}><ZatcaDashboardPage /></ProtectedRoute>} />
       <Route path="/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
       <Route path="/backup" element={<ProtectedRoute roles={["admin"]}><BackupPage /></ProtectedRoute>} />
       <Route path="/license" element={<ProtectedRoute developerOnly><LicensePage /></ProtectedRoute>} />

@@ -4,6 +4,7 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { useSettings, useUpdateSettings, useResetDemo, useDeleteAllData } from "@/hooks/useSettings";
 import { Save, ShieldCheck, Printer, Loader2, X, CheckCircle2, AlertCircle, Trash2 } from "lucide-react";
 import { apiGet } from "@/services/api";
+import ZatcaOnboardingSection from "./ZatcaOnboardingSection";
 
 const LOGO_MAX_EDGE = 900;
 const LOGO_MAX_CHARS = 1_200_000;
@@ -370,6 +371,9 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* ZATCA Phase 2 E-Invoicing Onboarding */}
+      <ZatcaOnboardingSection settings={settings || form} canSave={canSave} />
 
       {canSave && (
         <div className="pos-card p-4 md:p-5 border-destructive/40">

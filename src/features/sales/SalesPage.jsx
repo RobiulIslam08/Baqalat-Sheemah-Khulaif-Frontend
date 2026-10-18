@@ -344,14 +344,19 @@ export default function SalesPage() {
         if (shouldPrint) {
           // 1. Generate ZATCA QR Base64
           try {
-            const storeName = settings?.storeName ;
-            const vatNo = settings?.vatNumber;
-            const vatRate = Number(savedSale.vatPercent || 15);
-            const saleVatAmt = (Number(savedSale.netAmount) / (100 + vatRate)) * vatRate;
-            
-            const qrTlv = generateZatcaTlv(storeName, vatNo, savedSale.createdAt, savedSale.netAmount, saleVatAmt);
-            const qrCodeUrl = await QRCode.toDataURL(qrTlv, { width: 140, margin: 1 });
-            setQrBase64(qrCodeUrl);
+            if (savedSale.qrCodePayload) {
+              const qrCodeUrl = await QRCode.toDataURL(savedSale.qrCodePayload, { width: 140, margin: 1 });
+              setQrBase64(qrCodeUrl);
+            } else {
+              const storeName = settings?.storeName ;
+              const vatNo = settings?.vatNumber;
+              const vatRate = Number(savedSale.vatPercent || 15);
+              const saleVatAmt = (Number(savedSale.netAmount) / (100 + vatRate)) * vatRate;
+              
+              const qrTlv = generateZatcaTlv(storeName, vatNo, savedSale.createdAt, savedSale.netAmount, saleVatAmt);
+              const qrCodeUrl = await QRCode.toDataURL(qrTlv, { width: 140, margin: 1 });
+              setQrBase64(qrCodeUrl);
+            }
           } catch (err) {
             console.error("ZATCA QR Generation Failed", err);
           }

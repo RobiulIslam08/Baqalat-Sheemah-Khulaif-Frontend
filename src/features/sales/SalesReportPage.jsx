@@ -5,7 +5,7 @@ import { useSales, useSaleByBillNo } from "@/hooks/useSales";
 import { useProducts } from "@/hooks/useProducts";
 import { useUsers } from "@/hooks/useUsers";
 import { useSettings } from "@/hooks/useSettings";
-import { Search, Eye, Printer, Loader2, X, ReceiptText, RotateCcw, AlertCircle, FileDown } from "lucide-react";
+import { Search, Eye, Printer, Loader2, X, ReceiptText, RotateCcw, AlertCircle, FileDown, QrCode, CheckCircle2, Maximize2 } from "lucide-react";
 import QRCode from "qrcode";
 import { invoiceLanguageOf, receiptDir, receiptItemName, receiptMeta, receiptPayment, receiptQrLabel, receiptSaleType, receiptText, receiptVatLabel } from "./receiptLanguage";
 import { downloadMonthlySalesPdf } from "./monthlySalesPdf";
@@ -65,6 +65,59 @@ export default function SalesReportPage() {
   const [viewBillNo, setViewBillNo] = useState(null);
   const [qrBase64, setQrBase64] = useState("");
   const [isPrinting, setIsPrinting] = useState(false);
+
+  // Dedicated ZATCA Phase 2 QR Modal State (matching /zatca)
+  const [qrModalSale, setQrModalSale] = useState(null);
+  const [qrModalUrl, setQrModalUrl] = useState("");
+
+  const handleOpenQrModal = async (sale) => {
+    setQrModalSale(sale);
+    setQrModalUrl("");
+    try {
+      let payload = sale?.qrCodePayload;
+      let activeSale = sale;
+
+      // If payload is not in the row object, fetch full sale details from backend
+      if (!payload && sale?.billNo) {
+        try {
+          const res = await saleService.getByBillNo(sale.billNo);
+          if (res?.data) {
+            activeSale = res.data;
+            payload = res.data.qrCodePayload;
+            setQrModalSale(activeSale);
+          }
+        } catch (fetchErr) {
+          console.warn("Could not fetch full sale for QR modal:", fetchErr);
+        }
+      }
+
+      if (payload) {
+        const url = await QRCode.toDataURL(payload, {
+          width: 340,
+          margin: 3,
+          errorCorrectionLevel: "M",
+          color: { dark: "#000000", light: "#ffffff" },
+        });
+        setQrModalUrl(url);
+      } else {
+        const storeName = settings?.storeName;
+        const vatNo = settings?.vatNumber;
+        const vatRate = Number(activeSale?.vatPercent || 15);
+        const saleVatAmt = (Number(activeSale?.netAmount) / (100 + vatRate)) * vatRate;
+        const qrTlv = generateZatcaTlv(storeName, vatNo, activeSale?.createdAt, activeSale?.netAmount, saleVatAmt);
+        const url = await QRCode.toDataURL(qrTlv, {
+          width: 340,
+          margin: 3,
+          errorCorrectionLevel: "M",
+          color: { dark: "#000000", light: "#ffffff" },
+        });
+        setQrModalUrl(url);
+      }
+    } catch (err) {
+      console.error("QR modal generation error:", err);
+      setQrModalUrl("");
+    }
+  };
 
   // Data
   const { data, isLoading, isError, error } = useSales(searchParams);
@@ -137,14 +190,29 @@ export default function SalesReportPage() {
 
     const generateQr = async () => {
       try {
-        const storeName = settings?.storeName;
-        const vatNo = settings?.vatNumber;
-        const vatRate = Number(saleDetail.vatPercent || 15);
-        const saleVatAmt = (Number(saleDetail.netAmount) / (100 + vatRate)) * vatRate;
+        if (saleDetail.qrCodePayload) {
+          const qrCodeUrl = await QRCode.toDataURL(saleDetail.qrCodePayload, {
+            width: 340,
+            margin: 3,
+            errorCorrectionLevel: "M",
+            color: { dark: "#000000", light: "#ffffff" },
+          });
+          setQrBase64(qrCodeUrl);
+        } else {
+          const storeName = settings?.storeName;
+          const vatNo = settings?.vatNumber;
+          const vatRate = Number(saleDetail.vatPercent || 15);
+          const saleVatAmt = (Number(saleDetail.netAmount) / (100 + vatRate)) * vatRate;
 
-        const qrTlv = generateZatcaTlv(storeName, vatNo, saleDetail.createdAt, saleDetail.netAmount, saleVatAmt);
-        const qrCodeUrl = await QRCode.toDataURL(qrTlv, { width: 140, margin: 1 });
-        setQrBase64(qrCodeUrl);
+          const qrTlv = generateZatcaTlv(storeName, vatNo, saleDetail.createdAt, saleDetail.netAmount, saleVatAmt);
+          const qrCodeUrl = await QRCode.toDataURL(qrTlv, {
+            width: 340,
+            margin: 3,
+            errorCorrectionLevel: "M",
+            color: { dark: "#000000", light: "#ffffff" },
+          });
+          setQrBase64(qrCodeUrl);
+        }
       } catch (err) {
         console.error("ZATCA QR Generation Failed", err);
       }
@@ -386,20 +454,21 @@ export default function SalesReportPage() {
               <th>{t("report.amount")}</th>
               <th>{t("report.paymentMode")}</th>
               <th>{lang === "ar" ? "بواسطة" : "Created By"}</th>
-              <th className="w-16">{t("report.view")}</th>
-              <th className="w-16">{t("report.print")}</th>
+              <th className="w-14">{lang === "ar" ? "باركود" : "QR"}</th>
+              <th className="w-14">{t("report.view")}</th>
+              <th className="w-14">{t("report.print")}</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={9} className="text-center py-8">
+                <td colSpan={10} className="text-center py-8">
                   <Loader2 size={20} className="animate-spin inline-block" />
                 </td>
               </tr>
             ) : isError ? (
               <tr>
-                <td colSpan={9} className="text-center py-8 text-destructive bg-destructive/5">
+                <td colSpan={10} className="text-center py-8 text-destructive bg-destructive/5">
                   <div className="flex flex-col items-center gap-2">
                     <AlertCircle size={24} />
                     <p className="font-semibold">{lang === "ar" ? "فشل تحميل البيانات" : "Failed to load data"}</p>
@@ -409,7 +478,7 @@ export default function SalesReportPage() {
               </tr>
             ) : records.length === 0 ? (
               <tr>
-                <td colSpan={9} className="text-center text-muted-foreground py-8">
+                <td colSpan={10} className="text-center text-muted-foreground py-8">
                   {isSaleTab
                     ? lang === "ar" ? "لا توجد مبيعات" : "No sales found"
                     : lang === "ar" ? "لا توجد مرتجعات" : "No returns found"}
@@ -435,8 +504,17 @@ export default function SalesReportPage() {
                   <td className="text-xs text-muted-foreground">{rec.createdBy || "—"}</td>
                   <td>
                     <button
+                      title={lang === "ar" ? "معاينة باركود المرحلة الثانية (ZATCA QR)" : "Preview ZATCA Phase 2 QR"}
+                      className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10 p-1.5 rounded-lg transition-colors inline-flex items-center justify-center"
+                      onClick={() => handleOpenQrModal(rec)}
+                    >
+                      <QrCode size={17} />
+                    </button>
+                  </td>
+                  <td>
+                    <button
                       id={`btn-view-${rec.billNo}`}
-                      className="text-primary hover:opacity-70"
+                      className="text-primary hover:opacity-70 p-1.5"
                       onClick={() => setViewBillNo(rec.billNo)}
                     >
                       <Eye size={16} />
@@ -444,7 +522,7 @@ export default function SalesReportPage() {
                   </td>
                   <td>
                     <button
-                      className="text-muted-foreground hover:opacity-70"
+                      className="text-muted-foreground hover:opacity-70 p-1.5"
                       onClick={() => handlePrint(rec.billNo)}
                     >
                       <Printer size={16} />
@@ -649,6 +727,59 @@ export default function SalesReportPage() {
                           SR {Number(saleDetail.balance || 0).toFixed(2)}
                         </span>
                       </div>
+
+                      {/* ZATCA Phase 2 QR Display */}
+                      {qrBase64 && (
+                        <div className="mt-3 p-3 rounded-xl border border-border bg-card flex flex-col sm:flex-row items-center gap-4">
+                          <div
+                            onClick={() => handleOpenQrModal(saleDetail)}
+                            className="p-2 bg-white rounded-xl shadow-sm border border-black/10 shrink-0 cursor-pointer group relative hover:shadow-md transition-all"
+                            title={lang === "ar" ? "اضغط لتكبير الباركود للمسح بالجوال" : "Click to enlarge QR for phone scan"}
+                          >
+                            <img
+                              src={qrBase64}
+                              alt="ZATCA Phase 2 QR"
+                              className="w-36 h-36 rounded block select-none"
+                              style={{ imageRendering: "pixelated" }}
+                            />
+                            <div className="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-semibold gap-1 transition-opacity">
+                              <Maximize2 size={16} />
+                              <span>{lang === "ar" ? "تكبير" : "Enlarge"}</span>
+                            </div>
+                          </div>
+                          <div className="text-xs space-y-1.5 flex-1">
+                            <div className="font-bold text-foreground flex items-center gap-1.5 flex-wrap">
+                              <span className={`w-2.5 h-2.5 rounded-full ${saleDetail.qrCodePayload ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
+                              {lang === "ar" ? "باركود هيئة الزكاة (ZATCA Phase 2)" : "ZATCA Phase 2 QR Code"}
+                            </div>
+                            <p className="text-[11px] text-muted-foreground leading-relaxed">
+                              {saleDetail.qrCodePayload
+                                ? (lang === "ar" ? "معتمد ومشفّر بالختم الرقمي (ECDSA / XAdES-EPES)" : "Cryptographically Signed & Verified")
+                                : (lang === "ar" ? "باركود ضريبي مبسط (المرحلة الأولى)" : "Standard Tax QR (Phase 1)")}
+                            </p>
+                            {saleDetail.zatcaStatus && (
+                              <div className="pt-0.5">
+                                <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                                  saleDetail.zatcaStatus === "cleared" || saleDetail.zatcaStatus === "reported"
+                                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                                    : "bg-amber-100 text-amber-800"
+                                }`}>
+                                  <CheckCircle2 size={10} />
+                                  {saleDetail.zatcaStatus}
+                                </span>
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenQrModal(saleDetail)}
+                              className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-semibold text-[11px] transition-colors"
+                            >
+                              <Maximize2 size={12} />
+                              {lang === "ar" ? "تكبير الباركود للمسح المباشر" : "Enlarge QR for Phone Scan"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Financial Summary */}
@@ -696,6 +827,135 @@ export default function SalesReportPage() {
               <button
                 className="pos-btn-primary"
                 onClick={() => setViewBillNo(null)}
+              >
+                {lang === "ar" ? "إغلاق" : "Close"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dedicated Phase 2 QR Preview Modal (Matching /zatca) */}
+      {qrModalSale && (
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setQrModalSale(null);
+              setQrModalUrl("");
+            }
+          }}
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
+        >
+          <div className="bg-card w-full max-w-md rounded-2xl shadow-2xl border border-border overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="p-4 border-b flex justify-between items-center bg-muted/40">
+              <div className="flex items-center gap-2">
+                <QrCode size={18} className="text-primary" />
+                <h3 className="font-bold text-sm text-foreground">
+                  {lang === "ar" ? "باركود الفاتورة الإلكترونية (ZATCA Phase 2)" : "ZATCA Phase 2 QR Code"}
+                </h3>
+              </div>
+              <button
+                onClick={() => {
+                  setQrModalSale(null);
+                  setQrModalUrl("");
+                }}
+                className="hover:opacity-70 p-1 rounded-lg text-muted-foreground hover:text-foreground"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 flex flex-col items-center text-center space-y-4">
+              {qrModalUrl ? (
+                <div className="p-4 bg-white rounded-2xl shadow-md border border-black/10 inline-block">
+                  <img
+                    src={qrModalUrl}
+                    alt="ZATCA Phase 2 QR Code"
+                    className="w-64 h-64 mx-auto select-none block"
+                    style={{ imageRendering: "pixelated" }}
+                  />
+                </div>
+              ) : (
+                <div className="w-64 h-64 flex items-center justify-center bg-muted/40 rounded-2xl border border-dashed border-border">
+                  <Loader2 className="animate-spin text-primary" size={28} />
+                </div>
+              )}
+
+              <div>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="font-mono font-bold text-base text-foreground">
+                    {qrModalSale.billNo ? `Bill #${qrModalSale.billNo}` : qrModalSale.invoiceNumber}
+                  </span>
+                  {qrModalSale.qrCodePayload && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                      <CheckCircle2 size={12} />
+                      Phase 2 Compliant
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {new Date(qrModalSale.createdAt).toLocaleString(lang === "ar" ? "ar-SA" : "en-GB")}
+                </p>
+              </div>
+
+              {/* Invoice Summary */}
+              <div className="w-full text-xs text-start bg-muted/50 p-3.5 rounded-xl space-y-2 border border-border/60">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{lang === "ar" ? "نوع الفاتورة:" : "Invoice Type:"}</span>
+                  <span className="font-semibold">
+                    {qrModalSale.isReturn
+                      ? (lang === "ar" ? "إشعار دائن (مرتجع)" : "Credit Note (Return)")
+                      : (lang === "ar" ? "فاتورة ضريبية مبسطة (B2C)" : "Simplified Tax Invoice (B2C)")}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{lang === "ar" ? "المبلغ الإجمالي (شامل الضريبة):" : "Total (Incl. VAT):"}</span>
+                  <span className="font-bold text-foreground">
+                    SR {Number(qrModalSale.netAmount || qrModalSale.totalAmount || 0).toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{lang === "ar" ? "مبلغ ضريبة القيمة المضافة:" : "VAT Amount (15%):"}</span>
+                  <span className="font-semibold">
+                    SR {((Number(qrModalSale.netAmount || 0) / (1 + Number(qrModalSale.vatPercent || 15) / 100)) * (Number(qrModalSale.vatPercent || 15) / 100)).toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-1 border-t border-border/50">
+                  <span className="text-muted-foreground">{lang === "ar" ? "حالة الاعتماد في الهيئة:" : "ZATCA Status:"}</span>
+                  <span className="font-bold uppercase text-[11px] text-emerald-600 flex items-center gap-1">
+                    <CheckCircle2 size={12} />
+                    {qrModalSale.zatcaStatus || "reported"}
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                {lang === "ar"
+                  ? "امسح هذا الرمز باستخدام تطبيق (فاتورة) الرسمي لهيئة الزكاة والضريبة والجمارك للتحقق من اعتماد وصحة الفاتورة."
+                  : "Scan this QR code with the official ZATCA Fatoora app on your mobile phone to verify its authenticity."}
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t bg-muted/20 flex justify-end gap-2">
+              <button
+                className="pos-btn-secondary text-xs"
+                onClick={() => {
+                  handlePrint(qrModalSale.billNo);
+                  setQrModalSale(null);
+                }}
+              >
+                <Printer size={13} className="mr-1" />
+                {lang === "ar" ? "طباعة الفاتورة" : "Print Receipt"}
+              </button>
+              <button
+                className="pos-btn-primary text-xs"
+                onClick={() => {
+                  setQrModalSale(null);
+                  setQrModalUrl("");
+                }}
               >
                 {lang === "ar" ? "إغلاق" : "Close"}
               </button>
@@ -1049,11 +1309,13 @@ export default function SalesReportPage() {
           width: 100% !important;
         }
         .receipt-qr-img {
-          width: 140px !important;
-          height: 140px !important;
+          width: 150px !important;
+          height: 150px !important;
           max-width: 100% !important;
           display: block !important;
           margin: 0 auto !important;
+          image-rendering: pixelated !important;
+          image-rendering: crisp-edges !important;
         }
         .receipt-bilingual {
           display: inline-flex;
