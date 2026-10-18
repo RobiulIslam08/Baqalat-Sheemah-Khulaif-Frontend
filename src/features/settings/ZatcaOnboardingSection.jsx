@@ -7,13 +7,14 @@ export default function ZatcaOnboardingSection({ settings, canSave }) {
   const { data: statusData, isLoading: isStatusLoading, refetch: refetchStatus } = useZatcaDeviceStatus(branchId);
   const onboardMutation = useZatcaOnboard();
 
-  const [environment, setEnvironment] = useState("sandbox"); // 'sandbox' | 'production'
+  const [environment, setEnvironment] = useState("production"); // 'sandbox' | 'production'
   const [otp, setOtp] = useState("");
   const [buildingNumber, setBuildingNumber] = useState("1234");
   const [streetName, setStreetName] = useState(settings?.storeAddress || "خميس مشيط - مخطط الحسام");
   const [cityName, setCityName] = useState("Khamis Mushait");
   const [postalCode, setPostalCode] = useState("62461");
   const [showGuide, setShowGuide] = useState(false);
+  const [showReonboard, setShowReonboard] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -22,6 +23,12 @@ export default function ZatcaOnboardingSection({ settings, canSave }) {
       setStreetName(settings.storeAddress);
     }
   }, [settings]);
+
+  useEffect(() => {
+    if (statusData?.environment) {
+      setEnvironment(statusData.environment);
+    }
+  }, [statusData?.environment]);
 
   const isOnboarded = statusData?.isFullyOnboarded;
 
@@ -56,12 +63,14 @@ export default function ZatcaOnboardingSection({ settings, canSave }) {
       buildingNumber: buildingNumber.trim() || "1234",
       cityName: cityName.trim() || "Riyadh",
       postalCode: postalCode.trim() || "12211",
+      forceReonboard: showReonboard,
     };
 
     try {
       const res = await onboardMutation.mutateAsync(payload);
       setSuccessMsg("تم ربط واعتماد الجهاز بنجاح مع هيئة الزكاة والضريبة والجمارك! تم استخراج شهادة الإنتاج (PCSID) بنجاح.");
       setOtp("");
+      setShowReonboard(false);
       refetchStatus();
     } catch (err) {
       const errMsg = err?.message || err?.errorSources?.[0]?.message || "فشل الربط مع هيئة الزكاة. يرجى التأكد من صحة رمز OTP واختيار البيئة الصحيحة.";
@@ -158,197 +167,262 @@ export default function ZatcaOnboardingSection({ settings, canSave }) {
         </div>
       )}
 
-      {/* Onboarding Form */}
-      <form onSubmit={handleOnboard} className="mt-5 space-y-4">
-        {/* Environment Selector */}
-        <div>
-          <label className="pos-label font-semibold">بيئة الربط (Environment)</label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1.5">
-            <label
-              className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                environment === "sandbox"
-                  ? "border-primary bg-primary/5 text-foreground font-semibold"
-                  : "border-border hover:bg-muted/30 text-muted-foreground"
-              }`}
-            >
-              <input
-                type="radio"
-                name="zatca_env"
-                value="sandbox"
-                checked={environment === "sandbox"}
-                onChange={() => setEnvironment("sandbox")}
-                className="text-primary"
-              />
-              <div>
-                <div>Sandbox (بيئة الاختبار والتطوير)</div>
-                <div className="text-[11px] font-normal text-muted-foreground">للتجربة وفحص الفواتير التجريبية</div>
+      {/* Active Onboarded Banner / Form Switch */}
+      {isOnboarded && !showReonboard ? (
+        <div className="mt-5 p-5 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.04] space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0">
+                <CheckCircle2 size={24} />
               </div>
-            </label>
+              <div>
+                <h4 className="font-bold text-sm text-foreground">
+                  تم اعتماد وربط الجهاز بنجاح مع هيئة الزكاة والضريبة والجمارك (ZATCA Phase 2)
+                </h4>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  شهادة الإنتاج (Production CSID) نشطة وتعمل بكفاءة. فواتير البيع تُصدر مشفرة قانونياً بالختم الرقمي ورمز QR.
+                </p>
+              </div>
+            </div>
 
-            <label
-              className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                environment === "production"
-                  ? "border-emerald-600 bg-emerald-500/10 text-foreground font-semibold"
-                  : "border-border hover:bg-muted/30 text-muted-foreground"
-              }`}
+            <button
+              type="button"
+              onClick={() => setShowReonboard(true)}
+              className="pos-btn-outline text-xs px-3.5 py-1.5 self-start sm:self-auto gap-1.5"
             >
-              <input
-                type="radio"
-                name="zatca_env"
-                value="production"
-                checked={environment === "production"}
-                onChange={() => setEnvironment("production")}
-                className="text-emerald-600"
-              />
-              <div>
-                <div>Production (البيئة الحية والمباشرة)</div>
-                <div className="text-[11px] font-normal text-muted-foreground">للبقالة الحقيقية والفواتير القانونية الصادرة للزبائن</div>
-              </div>
-            </label>
+              <RefreshCw size={13} />
+              إعادة الربط برمز جديد (Re-onboard)
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-emerald-500/20 text-xs">
+            <div>
+              <span className="text-muted-foreground block text-[11px]">بيئة العمل:</span>
+              <span className="font-semibold text-emerald-700 dark:text-emerald-300">
+                {statusData?.environment === "production" ? "الإنتاج المباشر (Production)" : "التجربة (Sandbox)"}
+              </span>
+            </div>
+            <div>
+              <span className="text-muted-foreground block text-[11px]">الرقم التسلسلي:</span>
+              <span className="font-mono text-muted-foreground truncate block">{statusData?.serialNumber || "—"}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground block text-[11px]">الرقم الضريبي:</span>
+              <span className="font-mono font-bold text-foreground">{statusData?.vatNumber || settings?.vatNumber}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground block text-[11px]">تاريخ الاعتماد:</span>
+              <span className="text-muted-foreground">
+                {statusData?.onboardedAt ? new Date(statusData.onboardedAt).toLocaleDateString("ar-SA") : "معتمد"}
+              </span>
+            </div>
           </div>
         </div>
+      ) : (
+        <form onSubmit={handleOnboard} className="mt-5 space-y-4">
+          {isOnboarded && showReonboard && (
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs flex items-center justify-between">
+              <span>⚠️ أنت تقوم حالياً بطلب تجديد/إعادة ربط الجهاز بشهادة جديدة. تأكد من إدخال رمز OTP حديث من بوابة فاتورة.</span>
+              <button
+                type="button"
+                onClick={() => setShowReonboard(false)}
+                className="underline text-[11px] font-bold"
+              >
+                إلغاء والعودة
+              </button>
+            </div>
+          )}
 
-        {/* Inputs Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-2">
+          {/* Environment Selector */}
           <div>
-            <label className="pos-label">الرقم الضريبي للمنشأة (15 رقم)</label>
-            <input
-              type="text"
-              readOnly
-              value={settings?.vatNumber || ""}
-              placeholder="3XXXXXXXXXXXXX3"
-              className="pos-input bg-muted/40 cursor-not-allowed font-mono text-xs"
-            />
+            <label className="pos-label font-semibold">بيئة الربط (Environment)</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1.5">
+              <label
+                className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                  environment === "sandbox"
+                    ? "border-primary bg-primary/5 text-foreground font-semibold"
+                    : "border-border hover:bg-muted/30 text-muted-foreground"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="zatca_env"
+                  value="sandbox"
+                  checked={environment === "sandbox"}
+                  onChange={() => setEnvironment("sandbox")}
+                  className="text-primary"
+                />
+                <div>
+                  <div>Sandbox (بيئة الاختبار والتطوير)</div>
+                  <div className="text-[11px] font-normal text-muted-foreground">للتجربة وفحص الفواتير التجريبية</div>
+                </div>
+              </label>
+
+              <label
+                className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                  environment === "production"
+                    ? "border-emerald-600 bg-emerald-500/10 text-foreground font-semibold"
+                    : "border-border hover:bg-muted/30 text-muted-foreground"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="zatca_env"
+                  value="production"
+                  checked={environment === "production"}
+                  onChange={() => setEnvironment("production")}
+                  className="text-emerald-600"
+                />
+                <div>
+                  <div>Production (البيئة الحية والمباشرة)</div>
+                  <div className="text-[11px] font-normal text-muted-foreground">للبقالة الحقيقية والفواتير القانونية الصادرة للزبائن</div>
+                </div>
+              </label>
+            </div>
           </div>
 
-          <div>
-            <label className="pos-label">اسم المنشأة المسجل</label>
-            <input
-              type="text"
-              readOnly
-              value={settings?.storeNameAr || settings?.storeName || ""}
-              className="pos-input bg-muted/40 cursor-not-allowed text-xs"
-            />
-          </div>
+          {/* Inputs Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-2">
+            <div>
+              <label className="pos-label">الرقم الضريبي للمنشأة (15 رقم)</label>
+              <input
+                type="text"
+                readOnly
+                value={settings?.vatNumber || ""}
+                placeholder="3XXXXXXXXXXXXX3"
+                className="pos-input bg-muted/40 cursor-not-allowed font-mono text-xs"
+              />
+            </div>
 
-          <div>
-            <label className="pos-label">رقم السجل التجاري (CRN)</label>
-            <input
-              type="text"
-              readOnly
-              value={settings?.crNumber || "—"}
-              className="pos-input bg-muted/40 cursor-not-allowed text-xs"
-            />
-          </div>
+            <div>
+              <label className="pos-label">اسم المنشأة المسجل</label>
+              <input
+                type="text"
+                readOnly
+                value={settings?.storeNameAr || settings?.storeName || ""}
+                className="pos-input bg-muted/40 cursor-not-allowed text-xs"
+              />
+            </div>
 
-          <div>
-            <label className="pos-label font-bold text-primary flex items-center justify-between">
-              <span className="flex items-center gap-1">
-                <KeyRound size={13} />
-                رمز التحقق OTP (6 أرقام) *
-              </span>
+            <div>
+              <label className="pos-label">رقم السجل التجاري (CRN)</label>
+              <input
+                type="text"
+                readOnly
+                value={settings?.crNumber || "—"}
+                className="pos-input bg-muted/40 cursor-not-allowed text-xs"
+              />
+            </div>
+
+            <div>
+              <label className="pos-label font-bold text-primary flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <KeyRound size={13} />
+                  رمز التحقق OTP (6 أرقام) *
+                </span>
+                {environment === "sandbox" && (
+                  <button
+                    type="button"
+                    onClick={() => setOtp("123345")}
+                    className="text-[11px] text-primary underline font-medium hover:opacity-80"
+                  >
+                    استخدام رمز تجريبي (123345)
+                  </button>
+                )}
+              </label>
+              <input
+                type="text"
+                maxLength={6}
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                placeholder={environment === "sandbox" ? "123345 أو 123456" : "رمز من بوابة زاتورة"}
+                className="pos-input font-mono font-bold tracking-widest text-center text-sm border-primary focus:ring-primary"
+                disabled={onboardMutation.isPending}
+                required
+              />
               {environment === "sandbox" && (
-                <button
-                  type="button"
-                  onClick={() => setOtp("123345")}
-                  className="text-[11px] text-primary underline font-medium hover:opacity-80"
-                >
-                  استخدام رمز تجريبي (123345)
-                </button>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  💡 في بيئة Sandbox التجريبية، استخدم الرمز <span className="font-mono font-bold text-primary">123345</span> أو <span className="font-mono font-bold text-primary">123456</span>.
+                </p>
               )}
-            </label>
-            <input
-              type="text"
-              maxLength={6}
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-              placeholder={environment === "sandbox" ? "123345 أو 123456" : "رمز من بوابة زاتورة"}
-              className="pos-input font-mono font-bold tracking-widest text-center text-sm border-primary focus:ring-primary"
-              disabled={onboardMutation.isPending}
-              required
-            />
-            {environment === "sandbox" && (
-              <p className="text-[10px] text-muted-foreground mt-1">
-                💡 في بيئة Sandbox التجريبية، استخدم الرمز <span className="font-mono font-bold text-primary">123345</span> أو <span className="font-mono font-bold text-primary">123456</span>.
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Address Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-1">
-          <div>
-            <label className="pos-label">المدينة (City)</label>
-            <input
-              type="text"
-              value={cityName}
-              onChange={(e) => setCityName(e.target.value)}
-              className="pos-input text-xs"
-            />
-          </div>
-          <div>
-            <label className="pos-label">الرمز البريدي (Postal Code)</label>
-            <input
-              type="text"
-              value={postalCode}
-              onChange={(e) => setPostalCode(e.target.value)}
-              className="pos-input text-xs"
-            />
-          </div>
-          <div>
-            <label className="pos-label">رقم المبنى (Building No)</label>
-            <input
-              type="text"
-              value={buildingNumber}
-              onChange={(e) => setBuildingNumber(e.target.value)}
-              className="pos-input text-xs"
-            />
-          </div>
-          <div>
-            <label className="pos-label">اسم الشارع / الحي (Street)</label>
-            <input
-              type="text"
-              value={streetName}
-              onChange={(e) => setStreetName(e.target.value)}
-              className="pos-input text-xs"
-            />
-          </div>
-        </div>
-
-        {/* Submit Actions */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-border">
-          <div className="text-[11px] text-muted-foreground flex items-center gap-2">
-            <span>الحالة الحالية:</span>
-            {isStatusLoading ? (
-              <Loader2 size={12} className="animate-spin text-muted-foreground" />
-            ) : isOnboarded ? (
-              <span className="font-semibold text-emerald-600">
-                مربوط بالكامل (معتمد بتاريخ {new Date(statusData?.onboardedAt || Date.now()).toLocaleDateString("ar-SA")})
-              </span>
-            ) : (
-              <span className="font-semibold text-amber-600">غير معتمد حتى الآن</span>
-            )}
+            </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={onboardMutation.isPending || !canSave}
-            className="pos-btn-primary gap-2 px-6 py-2.5 text-xs font-semibold"
-          >
-            {onboardMutation.isPending ? (
-              <>
-                <Loader2 size={15} className="animate-spin" />
-                جاري التشفير والربط مع هيئة الزكاة...
-              </>
-            ) : (
-              <>
-                <ShieldCheck size={16} />
-                بدء الربط والاعتماد مع الزكاة (Onboard Device)
-              </>
-            )}
-          </button>
-        </div>
-      </form>
+          {/* Address Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-1">
+            <div>
+              <label className="pos-label">المدينة (City)</label>
+              <input
+                type="text"
+                value={cityName}
+                onChange={(e) => setCityName(e.target.value)}
+                className="pos-input text-xs"
+              />
+            </div>
+            <div>
+              <label className="pos-label">الرمز البريدي (Postal Code)</label>
+              <input
+                type="text"
+                value={postalCode}
+                onChange={(e) => setPostalCode(e.target.value)}
+                className="pos-input text-xs"
+              />
+            </div>
+            <div>
+              <label className="pos-label">رقم المبنى (Building No)</label>
+              <input
+                type="text"
+                value={buildingNumber}
+                onChange={(e) => setBuildingNumber(e.target.value)}
+                className="pos-input text-xs"
+              />
+            </div>
+            <div>
+              <label className="pos-label">اسم الشارع / الحي (Street)</label>
+              <input
+                type="text"
+                value={streetName}
+                onChange={(e) => setStreetName(e.target.value)}
+                className="pos-input text-xs"
+              />
+            </div>
+          </div>
+
+          {/* Submit Actions */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-border">
+            <div className="text-[11px] text-muted-foreground flex items-center gap-2">
+              <span>الحالة الحالية:</span>
+              {isStatusLoading ? (
+                <Loader2 size={12} className="animate-spin text-muted-foreground" />
+              ) : isOnboarded ? (
+                <span className="font-semibold text-emerald-600">
+                  مربوط بالكامل (معتمد بتاريخ {new Date(statusData?.onboardedAt || Date.now()).toLocaleDateString("ar-SA")})
+                </span>
+              ) : (
+                <span className="font-semibold text-amber-600">غير معتمد حتى الآن</span>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              disabled={onboardMutation.isPending || !canSave}
+              className="pos-btn-primary gap-2 px-6 py-2.5 text-xs font-semibold"
+            >
+              {onboardMutation.isPending ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" />
+                  جاري التشفير والربط مع هيئة الزكاة...
+                </>
+              ) : (
+                <>
+                  <ShieldCheck size={16} />
+                  بدء الربط والاعتماد مع الزكاة (Onboard Device)
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }
