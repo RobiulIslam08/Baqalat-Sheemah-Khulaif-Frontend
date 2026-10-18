@@ -50,7 +50,7 @@ export default function ZatcaOnboardingSection({ settings, canSave }) {
       vatNumber: vat,
       taxpayerName: settings?.storeNameAr || settings?.storeName || "بقالة شيمه خليف عايد العنزي",
       branchName: settings?.storeNameAr || settings?.storeName || "الفرع الرئيسي",
-      businessCategory: "Food & Beverage",
+      businessCategory: "Food and Beverage",
       crn: settings?.crNumber || undefined,
       streetName: streetName.trim() || "Main Street",
       buildingNumber: buildingNumber.trim() || "1234",
