@@ -14,13 +14,16 @@ import { invoiceLanguageOf, receiptDir, receiptItemName, receiptMeta, receiptPay
 
 const SCAN_IDLE_MS = 80;
 
-function findProductByCode(products, value) {
+/** Exact match for scanners / typed codes. productId only on Enter (avoid short-ID auto-fill). */
+function findProductByCode(products, value, { includeProductId = true } = {}) {
   const query = String(value ?? "").trim();
   if (!query) return null;
   return (
-    products.find(
-      (p) => p.productCode === query || p.productId === query || p.barcodeValue === query
-    ) || null
+    products.find((p) => {
+      if (p.productCode === query || p.barcodeValue === query) return true;
+      if (includeProductId && p.productId === query) return true;
+      return false;
+    }) || null
   );
 }
 
@@ -134,9 +137,9 @@ export default function SalesPage() {
     Object.values(codeResolveTimers.current).forEach((timer) => clearTimeout(timer));
   }, []);
 
-  // Match only after the scan or typing has finished, so a short product id
-  // cannot rewrite the field while the rest of the barcode is still arriving.
-  const resolveCode = (id, rawValue) => {
+  // Match after scan/typing idle. Debounce skips productId so typing "1" does not
+  // fill a short serial; Enter allows productId as well.
+  const resolveCode = (id, rawValue, { includeProductId = false } = {}) => {
     const value = String(rawValue ?? "");
     const pending = rowsRef.current.find((r) => r.id === id);
     // Ignore a timer for an older, shorter value. A newer value may start
@@ -145,7 +148,7 @@ export default function SalesPage() {
 
     const currentLang = langRef.current;
     const rate = vatPercentRef.current;
-    const foundProduct = findProductByCode(productsRef.current, value);
+    const foundProduct = findProductByCode(productsRef.current, value, { includeProductId });
 
     if (foundProduct) {
       setSummaryProductName(currentLang === "ar" ? (foundProduct.arabicName || foundProduct.productName) : foundProduct.productName);
@@ -222,14 +225,17 @@ export default function SalesPage() {
   const handleCodeChange = (id, value) => {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, code: value } : r)));
     clearTimeout(codeResolveTimers.current[id]);
-    codeResolveTimers.current[id] = setTimeout(() => resolveCode(id, value), SCAN_IDLE_MS);
+    codeResolveTimers.current[id] = setTimeout(
+      () => resolveCode(id, value, { includeProductId: false }),
+      SCAN_IDLE_MS
+    );
   };
 
   const handleCodeKeyDown = (id, event) => {
     if (event.key !== "Enter") return;
     event.preventDefault();
     clearTimeout(codeResolveTimers.current[id]);
-    resolveCode(id, event.currentTarget.value);
+    resolveCode(id, event.currentTarget.value, { includeProductId: true });
   };
 
   const updateRow = (id, field, value) => {
@@ -445,7 +451,26 @@ export default function SalesPage() {
         </tbody>
       </table>
       <div className="flex justify-end p-3"><button onClick={addRow} className="pos-btn-secondary gap-1"><Plus size={14} /> {t("purchase.addRow")}</button></div>
-      <div className="flex justify-end px-4 pb-3"><div className="text-right"><span className="font-semibold mr-3">{t("sales.totalAmount")}</span><span className="pos-amount text-xl">{t("common.sr")} {totalAmount.toFixed(2)}</span></div></div>
+      <div className="flex flex-wrap justify-end items-center gap-3 px-4 pb-3">
+        <div className="text-right">
+          <span className="font-semibold mr-3">{t("sales.totalAmount")}</span>
+          <span className="pos-amount text-xl">{t("common.sr")} {totalAmount.toFixed(2)}</span>
+        </div>
+        <button
+          onClick={() => handleSave(true)}
+          className="pos-btn-secondary gap-1"
+          disabled={createSale.isPending}
+        >
+          {t("sales.print")}
+        </button>
+        <button
+          className="pos-btn-primary gap-1"
+          onClick={() => handleSave(false)}
+          disabled={createSale.isPending}
+        >
+          {createSale.isPending && <Loader2 size={14} className="animate-spin" />} {t("sales.save")}
+        </button>
+      </div>
     </div>
 
     {/* Totals & Cash Payment inputs (Discount, Amount Paid, Balance) */}
@@ -512,23 +537,6 @@ export default function SalesPage() {
           <p className="pos-label mb-0">{t("sales.netAmount")}</p>
           <p className="text-3xl font-extrabold text-primary">{t("common.sr")} {netAmount.toFixed(2)}</p>
         </div>
-      </div>
-      
-      <div className="flex justify-center gap-3 mt-6 border-t border-border pt-4">
-        <button
-          onClick={() => handleSave(true)}
-          className="pos-btn-secondary gap-1"
-          disabled={createSale.isPending}
-        >
-          {t("sales.print")}
-        </button>
-        <button
-          className="pos-btn-primary gap-1"
-          onClick={() => handleSave(false)}
-          disabled={createSale.isPending}
-        >
-          {createSale.isPending && <Loader2 size={14} className="animate-spin" />} {t("sales.save")}
-        </button>
       </div>
     </div>
 
