@@ -988,10 +988,10 @@ export default function SalesReportPage() {
             <p className="receipt-subtext">{settings?.storeAddress || "خميس مشيط - مخطط الحسام - الصناعية القديم"}</p>
             <p className="receipt-subtext">{receiptMeta(invoiceMode, "جوال", "Mobile", settings?.supportContact || "0555917189")}</p>
             {settings?.vatNumber && (
-              <p className="receipt-subtext">{receiptMeta(invoiceMode, "الرقم الضريبي", "VAT No", settings.vatNumber)}</p>
+              <p className="receipt-subtext receipt-subtext-meta">{receiptMeta(invoiceMode, "الرقم الضريبي", "VAT", settings.vatNumber)}</p>
             )}
             {settings?.crNumber && (
-              <p className="receipt-subtext">{receiptMeta(invoiceMode, "السجل التجاري", "CR No", settings.crNumber)}</p>
+              <p className="receipt-subtext receipt-subtext-meta">{receiptMeta(invoiceMode, "السجل التجاري", "CR No", settings.crNumber)}</p>
             )}
           </div>
           
@@ -1352,17 +1352,22 @@ export default function SalesReportPage() {
           font-weight: 600;
           line-height: 1.35;
         }
+        .receipt-subtext-meta {
+          font-size: 10.5px !important;
+          white-space: nowrap;
+        }
         .receipt-meta-bilingual {
           display: inline-flex;
-          flex-wrap: wrap;
+          flex-wrap: nowrap;
           align-items: baseline;
           direction: rtl;
-          gap: 2px;
+          gap: 1px;
           max-width: 100%;
-          white-space: normal;
+          white-space: nowrap;
         }
         .receipt-meta-val {
           font-weight: 700;
+          white-space: nowrap;
         }
         .receipt-item-primary {
           display: inline;
