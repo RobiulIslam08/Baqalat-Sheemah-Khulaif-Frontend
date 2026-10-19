@@ -563,6 +563,12 @@ export default function SalesPage() {
           </h2>
           <p className="receipt-subtext">{settings?.storeAddress || "خميس مشيط - مخطط الحسام - الصناعية القديم"}</p>
           <p className="receipt-subtext">{receiptMeta(invoiceMode, "جوال", "Mobile", settings?.supportContact || "0555917189")}</p>
+          {settings?.vatNumber && (
+            <p className="receipt-subtext">{receiptMeta(invoiceMode, "الرقم الضريبي", "VAT No", settings.vatNumber)}</p>
+          )}
+          {settings?.crNumber && (
+            <p className="receipt-subtext">{receiptMeta(invoiceMode, "السجل التجاري", "CR No", settings.crNumber)}</p>
+          )}
         </div>
         
         <div className="receipt-divider-arrow" />
