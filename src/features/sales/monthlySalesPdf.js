@@ -17,6 +17,15 @@ function monthLabel(month) {
   }
 }
 
+function dayLabel(day) {
+  try {
+    const d = new Date(`${day}T00:00:00`);
+    return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  } catch {
+    return day;
+  }
+}
+
 // jsPDF's built-in fonts only support Latin (WinAnsi) characters — Arabic
 // text renders as garbled mojibake. The store name in Settings is always in
 // Arabic, so the PDF header always uses the Latin store name instead,
@@ -25,16 +34,22 @@ const STORE_NAME_LATIN = "Baqalat Sheemah Khulaif Aayed Al-Enazi Lil-Mawad Al-Gh
 
 /**
  * @param {Object} opts
- * @param {string} opts.month - "YYYY-MM"
- * @param {Array} opts.sales - sale/return records for that month
+ * @param {string} [opts.month] - "YYYY-MM" (monthly report)
+ * @param {string} [opts.day] - "YYYY-MM-DD" (daily report; takes priority over month)
+ * @param {Array} opts.sales - sale/return records for that period
  * @param {Object} [opts.settings] - store settings (storeName, vatNumber)
  * @param {boolean} [opts.isReturn] - whether this is a returns report
  */
-export function downloadMonthlySalesPdf({ month, sales, settings, isReturn = false }) {
+export function downloadMonthlySalesPdf({ month, day, sales, settings, isReturn = false }) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const storeName = STORE_NAME_LATIN;
   const vatNo = settings?.vatNumber || "—";
-  const reportTitle = isReturn ? "Monthly Sales Returns Report" : "Monthly Sales Report";
+  const isDaily = Boolean(day);
+  const reportTitle = isReturn
+    ? (isDaily ? "Daily Sales Returns Report" : "Monthly Sales Returns Report")
+    : (isDaily ? "Daily Sales Report" : "Monthly Sales Report");
+  const periodText = isDaily ? dayLabel(day) : monthLabel(month);
+  const filePeriod = isDaily ? day : month;
   const pageWidth = doc.internal.pageSize.getWidth();
   const usableWidth = pageWidth - 80;
 
@@ -78,7 +93,7 @@ export function downloadMonthlySalesPdf({ month, sales, settings, isReturn = fal
 
   doc.setFontSize(12);
   doc.setFont(undefined, "bold");
-  doc.text(`${reportTitle} - ${monthLabel(month)}`, 40, y);
+  doc.text(`${reportTitle} - ${periodText}`, 40, y);
   y += 15;
 
   doc.setFontSize(9);
@@ -121,5 +136,5 @@ export function downloadMonthlySalesPdf({ month, sales, settings, isReturn = fal
     );
   }
 
-  doc.save(`${isReturn ? "Sales-Returns" : "Sales"}-Report-${month}.pdf`);
+  doc.save(`${isReturn ? "Sales-Returns" : "Sales"}-Report-${filePeriod}.pdf`);
 }

@@ -18,6 +18,11 @@ function currentMonthValue() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function todayDateValue() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
 /** "YYYY-MM" -> { from: "YYYY-MM-01", to: "YYYY-MM-<lastDay>" } */
 function monthRange(month) {
   if (!month) return { from: "", to: "" };
@@ -43,6 +48,7 @@ export default function SalesReportPage() {
   // Monthly report selector — the table below always reflects this month
   const [reportMonth, setReportMonth] = useState(currentMonthValue());
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [todayPdfLoading, setTodayPdfLoading] = useState(false);
   const initialRange = monthRange(currentMonthValue());
 
   // Filters
@@ -314,6 +320,36 @@ export default function SalesReportPage() {
     }
   };
 
+  const handleDownloadTodayPdf = async () => {
+    setTodayPdfLoading(true);
+    try {
+      const today = todayDateValue();
+      const res = await saleService.getAll({
+        type: activeTab,
+        fromDate: today,
+        toDate: today,
+        limit: 5000,
+      });
+      const todaySales = res?.data || [];
+
+      if (todaySales.length === 0) {
+        showError(null, lang === "ar" ? "لا توجد بيانات لليوم" : "No records found for today");
+        return;
+      }
+
+      downloadMonthlySalesPdf({
+        day: today,
+        sales: todaySales,
+        settings,
+        isReturn: !isSaleTab,
+      });
+    } catch (err) {
+      showError(err, "Failed to generate the daily PDF report");
+    } finally {
+      setTodayPdfLoading(false);
+    }
+  };
+
   const isSaleTab = activeTab === TAB_SALES;
   const invoiceMode = invoiceLanguageOf(settings);
   const nameAlign = invoiceMode === "en" ? "text-left" : "text-right";
@@ -364,15 +400,24 @@ export default function SalesReportPage() {
           <button
             className="pos-btn-primary gap-1"
             onClick={handleDownloadMonthlyPdf}
-            disabled={pdfLoading || !reportMonth}
+            disabled={pdfLoading || todayPdfLoading || !reportMonth}
           >
             {pdfLoading ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
             {lang === "ar" ? "تنزيل PDF" : "Download PDF"}
           </button>
+          <button
+            id="btn-download-today-report"
+            className="pos-btn-secondary gap-1"
+            onClick={handleDownloadTodayPdf}
+            disabled={pdfLoading || todayPdfLoading}
+          >
+            {todayPdfLoading ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
+            {lang === "ar" ? "اليوم" : "Today"}
+          </button>
           <span className="text-xs text-muted-foreground">
             {lang === "ar"
-              ? "يعرض الجدول أدناه بيانات الشهر المحدد مع الإجمالي، ويمكنك أيضاً تنزيله كملف PDF"
-              : "The table below shows this month's records with the total, and you can also download it as a PDF"}
+              ? "يعرض الجدول أدناه بيانات الشهر المحدد مع الإجمالي. استخدم «اليوم» لتنزيل تقرير اليوم"
+              : "The table below shows this month's records. Use Today to download today's daily report"}
           </span>
         </div>
       </div>
