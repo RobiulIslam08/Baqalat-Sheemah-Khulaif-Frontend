@@ -7,10 +7,10 @@ import { useProducts } from "@/hooks/useProducts";
 import { useCreateSale } from "@/hooks/useSales";
 import { useSettings } from "@/hooks/useSettings";
 import { Plus, Trash2, Loader2 } from "lucide-react";
-import QRCode from "qrcode";
+import { buildReceiptQrPng } from "./receiptQr";
 import { showError } from "@/lib/toast-helpers";
 import { printReceipt } from "@/lib/printReceipt";
-import { invoiceLanguageOf, receiptDir, receiptItemName, receiptMeta, receiptPayment, receiptQrLabel, receiptSaleType, receiptText, receiptVatLabel } from "./receiptLanguage";
+import { invoiceLanguageOf, receiptDir, receiptItemName, receiptMeta, receiptPayment, receiptSaleType, receiptText, receiptVatLabel } from "./receiptLanguage";
 
 const SCAN_IDLE_MS = 80;
 
@@ -65,7 +65,7 @@ export default function SalesPage() {
   const [summaryRemaining, setSummaryRemaining] = useState("");
 
   const [printData, setPrintData] = useState(null);
-  const [qrBase64, setQrBase64] = useState("");
+  const [qrImg, setQrImg] = useState("");
   const [focusRowId, setFocusRowId] = useState(null);
   const codeInputRefs = useRef({});
   const codeResolveTimers = useRef({});
@@ -84,12 +84,23 @@ export default function SalesPage() {
     codeInputRefs.current[1]?.focus();
   }, []);
 
-  // Auto-focus the product code input of a newly created row
+  // Auto-focus the new row's code field, and scroll until that row and the
+  // Add Row button sit above the fixed Total / print / Save bar.
   useEffect(() => {
-    if (focusRowId !== null && codeInputRefs.current[focusRowId]) {
-      codeInputRefs.current[focusRowId].focus();
-      setFocusRowId(null);
+    if (focusRowId === null) return;
+    const input = codeInputRefs.current[focusRowId];
+    if (!input) return;
+    input.focus({ preventScroll: true });
+    const bar = document.querySelector("[data-sales-action-bar]");
+    const addRow = document.querySelector("[data-sales-add-row]");
+    const barHeight = bar?.getBoundingClientRect().height ?? 72;
+    const limit = window.innerHeight - barHeight - 12;
+    const target = addRow || input.closest("tr") || input;
+    const bottom = target.getBoundingClientRect().bottom;
+    if (bottom > limit) {
+      window.scrollBy({ top: bottom - limit });
     }
+    setFocusRowId(null);
   }, [focusRowId, rows]);
 
   const totalAmount = rows.reduce((sum, r) => sum + (parseFloat(r.total) || 0), 0);
@@ -348,21 +359,17 @@ export default function SalesPage() {
         }
 
         if (shouldPrint) {
-          // 1. Generate ZATCA QR Base64
+          // 1. Generate a sharp vector ZATCA QR for thermal print
           try {
-            if (savedSale.qrCodePayload) {
-              const qrCodeUrl = await QRCode.toDataURL(savedSale.qrCodePayload, { width: 140, margin: 1 });
-              setQrBase64(qrCodeUrl);
-            } else {
-              const storeName = settings?.storeName ;
+            let payload = savedSale.qrCodePayload;
+            if (!payload) {
+              const storeName = settings?.storeName;
               const vatNo = settings?.vatNumber;
               const vatRate = Number(savedSale.vatPercent || 15);
               const saleVatAmt = (Number(savedSale.netAmount) / (100 + vatRate)) * vatRate;
-              
-              const qrTlv = generateZatcaTlv(storeName, vatNo, savedSale.createdAt, savedSale.netAmount, saleVatAmt);
-              const qrCodeUrl = await QRCode.toDataURL(qrTlv, { width: 140, margin: 1 });
-              setQrBase64(qrCodeUrl);
+              payload = generateZatcaTlv(storeName, vatNo, savedSale.createdAt, savedSale.netAmount, saleVatAmt);
             }
+            setQrImg(await buildReceiptQrPng(payload));
           } catch (err) {
             console.error("ZATCA QR Generation Failed", err);
           }
@@ -378,7 +385,7 @@ export default function SalesPage() {
           setTimeout(async () => {
             await printReceipt();
             setPrintData(null);
-            setQrBase64("");
+            setQrImg("");
             resetForm();
           }, 400);
         } else {
@@ -404,7 +411,7 @@ export default function SalesPage() {
   const nameAlign = invoiceMode === "en" ? "text-left" : "text-right";
   const amountAlign = invoiceMode === "en" ? "text-right" : "text-left";
 
-  return (<div className="space-y-4">
+  return (<div className="space-y-4 pb-24">
     {/* Summary Bar */}
     <div className="pos-summary-bar">
       <div className="pos-summary-cell pos-summary-cell-header">{t("sales.grandTotal")}</div>
@@ -450,8 +457,11 @@ export default function SalesPage() {
           </tr>))}
         </tbody>
       </table>
-      <div className="flex justify-end p-3"><button onClick={addRow} className="pos-btn-secondary gap-1"><Plus size={14} /> {t("purchase.addRow")}</button></div>
-      <div className="flex flex-wrap justify-end items-center gap-3 px-4 pb-3">
+      <div data-sales-add-row className="flex justify-end p-3"><button onClick={addRow} className="pos-btn-secondary gap-1"><Plus size={14} /> {t("purchase.addRow")}</button></div>
+    </div>
+
+    <div data-sales-action-bar className="fixed bottom-0 inset-x-0 z-40 border-t border-border bg-card shadow-[0_-4px_12px_rgba(0,0,0,0.08)] print:hidden">
+      <div className="container mx-auto flex flex-wrap items-center justify-end gap-3 px-4 py-3">
         <div className="text-right">
           <span className="font-semibold mr-3">{t("sales.totalAmount")}</span>
           <span className="pos-amount text-xl">{t("common.sr")} {totalAmount.toFixed(2)}</span>
@@ -679,15 +689,7 @@ export default function SalesPage() {
         </div>
 
         <div className="receipt-qr-section">
-          {qrBase64 && <img src={qrBase64} alt="ZATCA QR" className="receipt-qr-img" />}
-          <div className="receipt-qr-text">{receiptQrLabel(invoiceMode)}</div>
-        </div>
-
-        <div className="receipt-footer-msg">
-          {receiptText(invoiceMode, "شكراً لزيارتكم", "Thank you for your visit")}
-        </div>
-        <div className="receipt-footer-sub">
-          {receiptText(invoiceMode, "يرجى الاحتفاظ بالفاتورة للاسترجاع أو الاستبدال", "Please retain the receipt for returns or exchanges")}
+          {qrImg && <img src={qrImg} alt="ZATCA QR" className="receipt-qr-img" />}
         </div>
       </div>,
       document.body
@@ -885,17 +887,19 @@ export default function SalesPage() {
         flex-direction: column !important;
         align-items: center !important;
         justify-content: center !important;
-        margin-top: 10px !important;
-        margin-bottom: 6px !important;
+        margin-top: 8px !important;
+        margin-bottom: 4px !important;
         text-align: center !important;
         width: 100% !important;
+        background: #fff !important;
       }
       .receipt-qr-img {
-        width: 140px !important;
-        height: 140px !important;
-        max-width: 100% !important;
+        width: 54mm !important;
+        height: 54mm !important;
+        max-width: 54mm !important;
         display: block !important;
         margin: 0 auto !important;
+        background: #fff !important;
       }
       .receipt-bilingual {
         display: inline-flex;

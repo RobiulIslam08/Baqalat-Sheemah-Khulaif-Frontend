@@ -7,7 +7,8 @@ import { useUsers } from "@/hooks/useUsers";
 import { useSettings } from "@/hooks/useSettings";
 import { Search, Eye, Printer, Loader2, X, ReceiptText, RotateCcw, AlertCircle, FileDown, QrCode, CheckCircle2, Maximize2 } from "lucide-react";
 import QRCode from "qrcode";
-import { invoiceLanguageOf, receiptDir, receiptItemName, receiptMeta, receiptPayment, receiptQrLabel, receiptSaleType, receiptText, receiptVatLabel } from "./receiptLanguage";
+import { buildReceiptQrPng } from "./receiptQr";
+import { invoiceLanguageOf, receiptDir, receiptItemName, receiptMeta, receiptPayment, receiptSaleType, receiptText, receiptVatLabel } from "./receiptLanguage";
 import { downloadMonthlySalesPdf } from "./monthlySalesPdf";
 import { saleService } from "@/services/sale.service";
 import { showError } from "@/lib/toast-helpers";
@@ -70,6 +71,8 @@ export default function SalesReportPage() {
   // Bill detail viewer
   const [viewBillNo, setViewBillNo] = useState(null);
   const [qrBase64, setQrBase64] = useState("");
+  const [qrImg, setQrImg] = useState("");
+  const [qrImgBillNo, setQrImgBillNo] = useState("");
   const [isPrinting, setIsPrinting] = useState(false);
 
   // Dedicated ZATCA Phase 2 QR Modal State (matching /zatca)
@@ -191,34 +194,30 @@ export default function SalesReportPage() {
   useEffect(() => {
     if (!saleDetail) {
       setQrBase64("");
+      setQrImg("");
+      setQrImgBillNo("");
       return;
     }
 
     const generateQr = async () => {
       try {
-        if (saleDetail.qrCodePayload) {
-          const qrCodeUrl = await QRCode.toDataURL(saleDetail.qrCodePayload, {
-            width: 340,
-            margin: 3,
-            errorCorrectionLevel: "M",
-            color: { dark: "#000000", light: "#ffffff" },
-          });
-          setQrBase64(qrCodeUrl);
-        } else {
+        let payload = saleDetail.qrCodePayload;
+        if (!payload) {
           const storeName = settings?.storeName;
           const vatNo = settings?.vatNumber;
           const vatRate = Number(saleDetail.vatPercent || 15);
           const saleVatAmt = (Number(saleDetail.netAmount) / (100 + vatRate)) * vatRate;
-
-          const qrTlv = generateZatcaTlv(storeName, vatNo, saleDetail.createdAt, saleDetail.netAmount, saleVatAmt);
-          const qrCodeUrl = await QRCode.toDataURL(qrTlv, {
-            width: 340,
-            margin: 3,
-            errorCorrectionLevel: "M",
-            color: { dark: "#000000", light: "#ffffff" },
-          });
-          setQrBase64(qrCodeUrl);
+          payload = generateZatcaTlv(storeName, vatNo, saleDetail.createdAt, saleDetail.netAmount, saleVatAmt);
         }
+        setQrImg(await buildReceiptQrPng(payload));
+        setQrImgBillNo(String(saleDetail.billNo || ""));
+        const qrCodeUrl = await QRCode.toDataURL(payload, {
+          width: 512,
+          margin: 4,
+          errorCorrectionLevel: "L",
+          color: { dark: "#000000", light: "#ffffff" },
+        });
+        setQrBase64(qrCodeUrl);
       } catch (err) {
         console.error("ZATCA QR Generation Failed", err);
       }
@@ -229,14 +228,14 @@ export default function SalesReportPage() {
 
   // Elegant print trigger that fires when printing is requested, details are loaded, and QR is ready
   useEffect(() => {
-    if (isPrinting && saleDetail && qrBase64) {
+    if (isPrinting && saleDetail && qrImg && qrImgBillNo === String(saleDetail.billNo || "")) {
       const timer = setTimeout(async () => {
         await printReceipt();
         setIsPrinting(false);
       }, 400); // small delay to ensure full render
       return () => clearTimeout(timer);
     }
-  }, [isPrinting, saleDetail, qrBase64]);
+  }, [isPrinting, saleDetail, qrImg, qrImgBillNo]);
 
   const handleSearch = () => {
     const params = { type: activeTab, page: 1, limit: PAGE_SIZE };
@@ -1148,15 +1147,7 @@ export default function SalesReportPage() {
           </div>
 
           <div className="receipt-qr-section">
-            {qrBase64 && <img src={qrBase64} alt="ZATCA QR" className="receipt-qr-img" />}
-            <div className="receipt-qr-text">{receiptQrLabel(invoiceMode)}</div>
-          </div>
-
-          <div className="receipt-footer-msg">
-            {receiptText(invoiceMode, "شكراً لزيارتكم", "Thank you for your visit")}
-          </div>
-          <div className="receipt-footer-sub">
-            {receiptText(invoiceMode, "يرجى الاحتفاظ بالفاتورة للاسترجاع أو الاستبدال", "Please retain the receipt for returns or exchanges")}
+            {qrImg && <img src={qrImg} alt="ZATCA QR" className="receipt-qr-img" />}
           </div>
         </div>,
         document.body
@@ -1354,19 +1345,19 @@ export default function SalesReportPage() {
           flex-direction: column !important;
           align-items: center !important;
           justify-content: center !important;
-          margin-top: 10px !important;
-          margin-bottom: 6px !important;
+          margin-top: 8px !important;
+          margin-bottom: 4px !important;
           text-align: center !important;
           width: 100% !important;
+          background: #fff !important;
         }
         .receipt-qr-img {
-          width: 150px !important;
-          height: 150px !important;
-          max-width: 100% !important;
+          width: 54mm !important;
+          height: 54mm !important;
+          max-width: 54mm !important;
           display: block !important;
           margin: 0 auto !important;
-          image-rendering: pixelated !important;
-          image-rendering: crisp-edges !important;
+          background: #fff !important;
         }
         .receipt-bilingual {
           display: inline-flex;

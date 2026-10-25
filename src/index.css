@@ -532,17 +532,19 @@
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
-    margin-top: 10px !important;
-    margin-bottom: 6px !important;
+    margin-top: 8px !important;
+    margin-bottom: 4px !important;
     text-align: center !important;
     width: 100% !important;
+    background: #fff !important;
   }
   .receipt-qr-img {
-    width: 140px !important;
-    height: 140px !important;
-    max-width: 100% !important;
+    width: 54mm !important;
+    height: 54mm !important;
+    max-width: 54mm !important;
     display: block !important;
     margin: 0 auto !important;
+    background: #fff !important;
   }
   .receipt-qr-text {
     font-size: 11.5px !important;
