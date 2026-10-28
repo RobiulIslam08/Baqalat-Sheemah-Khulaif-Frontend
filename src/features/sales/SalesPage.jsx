@@ -576,9 +576,6 @@ export default function SalesPage() {
           {settings?.vatNumber && (
             <p className="receipt-subtext receipt-subtext-meta">{receiptMeta(invoiceMode, "الرقم الضريبي", "VAT", settings.vatNumber)}</p>
           )}
-          {settings?.crNumber && (
-            <p className="receipt-subtext receipt-subtext-meta">{receiptMeta(invoiceMode, "السجل التجاري", "CR No", settings.crNumber)}</p>
-          )}
         </div>
         
         <div className="receipt-divider-arrow" />
